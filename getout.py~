@@ -1,0 +1,7 @@
+import ROOT
+import numpy as np
+
+inputfile='/lustre/fs19/group/cta/users/sspencer/ver/user/64080.root'
+
+f=ROOT.TFile.Open(inputfile,"read")
+print(f)
