@@ -1,0 +1,47 @@
+##
+## This is the default standard .bashrc provided to the users.
+## $HOME/.bashrc are read by bash when you start a new shell. 
+##
+
+# VERITAS CVS server
+export EVNDISPSYS="/lustre/fs19/group/cta/users/sspencer/evdisp/trunk"
+alias bbftp='/lustre/fs19/group/cta/users/sspencer/bbftp-client-3.2.1/bbftpc/bbftp'
+export PATH='/lustre/fs19/group/cta/users/sspencer/Download/cmake-3.15.0-rc1/bin
+':$PATH
+export CVSROOT=:pserver:cvsuser@romulus.ucsc.edu:/home/cvsuser/VERITAS
+export VHOME="/lustre/fs19/group/cta/users/sspencer"
+export ROOTSYS='/afs/ifh.de/group/cta/cta/software/root/root_v6.14.06_build/'
+source $ROOTSYS/bin/thisroot.sh
+export PATH=$ROOTSYS/bin:$PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+export SOFASYS=$EVNDISPSYS/sofa
+export VERITAS_EVNDISP_AUX_DIR="/lustre/fs19/group/cta/users/sspencer/ver/aux"
+export VERITAS_DATA_DIR="/lustre/fs19/group/cta/users/sspencer/ver/"
+export VERITAS_USER_DATA_DIR="/lustre/fs19/group/cta/users/sspencer/ver/aux/"
+export VERITAS_USER_LOG_DIR="/lustre/fs19/group/cta/users/sspencer/ver/log"
+export VERITAS_IRFPRODUCTION_DIR="/lustre/fs19/group/cta/users/sspencer/ver/irf"
+
+# For trunk eventDisplay version:
+export PATH=/lustre/fs19/group/cta/users/sspencer/bbftp-client-3.2.1/bbftpc:$PATH
+export VBFSYS='/lustre/fs19/group/cta/users/sspencer/VBF-0.3.4'
+export PATH=$VBFSYS/include:$VBFSYS/bin:$EVNDISP/bin:$PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VBFSYS/lib:$EVNDISPSYS/lib:$EVNDISPSYS/obj
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/afs/ifh.de/group/cta/cta/software/python/python_3.6/Python-3.6.5_gcc4.8/lib
+export PYTHONDIR=/afs/ifh.de/group/cta/cta/software/python/python_3.6/Python-3.6.5_gcc4.8/
+alias python=/afs/ifh.de/group/cta/cta/software/python/python_3.6/Python-3.6.5_gcc4.8/bin/python3
+# Simulation tools and MODTRAN paths:
+export PYTHONPATH=/lustre/fs19/group/cta/users/sspencer/Download/cmake-3.15.0-rc1/bin/lib/python3:$PYTHONPATH
+export PYTHONPATH=/lustre/fs19/group/cta/users/sspencer/Download/ctapipe/build/lib:$PYTHONPATH
+export PYTHONPATH=/lustre/fs19/group/cta/users/sspencer/Download/psutil/build/lib.linux-x86_64-3.6:$PYTHONPATH
+## Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+## history
+# HISTSIZE=100
+
+## define your own aliases
+# alias "rm=rm -i"
+
+# EOF

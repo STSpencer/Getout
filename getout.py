@@ -4,6 +4,7 @@ from root_numpy import tree2array
 from ROOT import gSystem, TFile, TTreeReader
 from root_numpy import tree2array
 import matplotlib.pyplot as plt
+from image_mapping import ImageMapper
 
 ROOT.ROOT.EnableImplicitMT()
 
@@ -12,7 +13,7 @@ if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
 
 
 inputfile='/lustre/fs19/group/cta/users/sspencer/ver/user/64080.root'
-
+cam = 'VERITAS'
 #f=TFile.Open(inputfile,"read")
 def Map(tf, browsable_to, tpath=None):
     """
@@ -65,16 +66,26 @@ def Map_TFile(filename, deep_maps=None):
     
     return deep_maps
 
+def plot_image(mapper, camera_type):
+    print(camera_type)
+    image = mapper.map_image(test_pixel_values[camera_type], camera_type)
+    fig, ax = plt.subplots(1)
+    ax.set_aspect(1)
+    ax.pcolor(image[:,:,0], cmap='viridis')
+    plt.show()
+
 print(Map_TFile(inputfile))
 f=ROOT.TFile(inputfile)
 print(dir(f))
 mytree=f.Get("Tel_1/dbpixeldata_Currents")
 imarr=tree2array(mytree)
 #print(imarr,type(imarr))
+mapper=ImageMapper()
 for i in np.arange(len(imarr)):
     image=imarr[i][3]
-    image.reshape((25,25))
     print(np.shape(image))
+    image = mapper.map_image(image,'VERITAS')
+    plot_image(image)
     #plt.imshow(image)
     #plt.show()
 
