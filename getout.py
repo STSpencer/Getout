@@ -66,9 +66,8 @@ def Map_TFile(filename, deep_maps=None):
     
     return deep_maps
 
-def plot_image(mapper, camera_type):
-    print(camera_type)
-    image = mapper.map_image(test_pixel_values[camera_type], camera_type)
+
+def plot_image(image):
     fig, ax = plt.subplots(1)
     ax.set_aspect(1)
     ax.pcolor(image[:,:,0], cmap='viridis')
@@ -84,6 +83,7 @@ mapper=ImageMapper()
 for i in np.arange(len(imarr)):
     image=imarr[i][3]
     print(np.shape(image))
+    image=np.expand_dims(image,1)
     image = mapper.map_image(image,'VERITAS')
     plot_image(image)
     #plt.imshow(image)
