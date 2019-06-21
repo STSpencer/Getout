@@ -2,7 +2,8 @@ import ROOT
 import numpy as np
 from root_numpy import tree2array
 from ROOT import gSystem, TFile, TTreeReader
-from root_numpy import tree2array
+from root_numpy import tree2array,root2array
+import root_numpy
 import matplotlib.pyplot as plt
 from image_mapping import ImageMapper
 
@@ -12,9 +13,10 @@ if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
     print("Problem loading EventDisplay libraries - please check this before proceeding")
 
 
-inputfile='/lustre/fs19/group/cta/users/sspencer/ver/user/64080.root'
+inputfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/64080_dst.root'
 cam = 'VERITAS'
 #f=TFile.Open(inputfile,"read")
+
 def Map(tf, browsable_to, tpath=None):
     """
     Maps objets as dict[obj_name][0] using a TFile (tf) and TObject to browse.
@@ -73,19 +75,82 @@ def plot_image(image):
     ax.pcolor(image[:,:,0], cmap='viridis')
     plt.show()
 
-print(Map_TFile(inputfile))
-f=ROOT.TFile(inputfile)
-print(dir(f))
-mytree=f.Get("Tel_1/dbpixeldata_Currents")
-imarr=tree2array(mytree)
-#print(imarr,type(imarr))
-mapper=ImageMapper()
-for i in np.arange(len(imarr)):
-    image=imarr[i][3]
-    print(np.shape(image))
-    image=np.expand_dims(image,1)
-    image = mapper.map_image(image,'VERITAS')
-    plot_image(image)
+#print(Map_TFile(inputfile))
+print(root_numpy.list_directories(inputfile))
+print(root_numpy.list_trees(inputfile))
+blist=root_numpy.list_branches(inputfile,'dst')
+print(blist)
+#hist=root_numpy.evaluate(inputfile,'pulseSums/hSumHigh_1_0')
+#arr=root_numpy.root2array(inputfile,'pulseSums')
+#print(arr)
+#raise KeyboardInterrupt
+f=ROOT.TFile.Open(inputfile,'read')
+#print(dir(f))
+mytree=f.Get("dst")
+#print(dir(mytree))
+nochannels=499
+notrigs=100
+'''
+notrigs=len(f.Get('pulseSums/hSumHigh_1_0'))
+data_arr=np.zeros((notrigs,nochannels))
+
+for i in np.arange(nochannels):
+    j=0
+    evns=f.Get('pulseSums/hSumHigh_1_'+str(i))
+    for pixel in evns:
+        data_arr[j][i]=pixel
+        j=j+1 
+
+print(data_arr,np.shape(data_arr))
+#print(mytree.Print('hSumHigh_1_0'))
+
+
+print(dir(mytree))
+print(type(mytree))
+print(mytree)
+for x in blist:
+    arr=tree2array(mytree,branches=[x],start=0,stop=1)
+    print(x,np.shape(arr[0][0]))
+    print(arr[0])
+raise KeyboardInterrupt
+imarr=tree2array(mytree,branches=['sum'],start=0,stop=10)
+deadarr=tree2array(mytree,branches=['dead'],start=0,stop=10)
+print(np.shape(imarr))
+'''
+imarr=tree2array(mytree,branches=['sum'],start=0,stop=notrigs)
+print(imarr)
+print(np.shape(imarr))
+print(imarr[0][0])
+print(np.shape(imarr[0][0][0]))
+
+mappers = {}
+print("Initialization time (total for all telescopes):")
+hex_methods = ['oversampling', 'rebinning', 'nearest_interpolation',
+               'bilinear_interpolation', 'bicubic_interpolation', 
+               'image_shifting', 'axial_addressing']
+hex_cams=['VERITAS']
+for method in hex_methods:
+    mapping_method = {cam: method for cam in hex_cams}
+    mappers[method] = ImageMapper(mapping_method=mapping_method)
+
+for i in np.arange(notrigs):
+    fig,axs=plt.subplots(1,7,figsize=(30,4))
+    axs=axs.ravel()
+    j=0
+    for method in hex_methods:
+        print(imarr[i][0])
+        image=imarr[i][0][0][:499]
+        print('im',image)
+        print(np.shape(image))
+        image=np.expand_dims(image,1)
+        print('{}: {}'.format(cam, method))
+        print(np.shape(image))
+        image = mappers[method].map_image(image, cam)
+        axs[j].pcolor(image[:,:,0], cmap='viridis')
+        axs[j].set_title(method)
+        j=j+1
+    plt.tight_layout()
+    plt.show()
     #plt.imshow(image)
     #plt.show()
 
