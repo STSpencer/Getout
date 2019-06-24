@@ -24,6 +24,9 @@ nochannels=499
 notrigs=100
 
 imarr=tree2array(mytree,branches=['sum'],start=0,stop=notrigs)
+deadarr=tree2array(mytree,branches=['dead'],start=0,stop=notrigs)
+evarr=tree2array(mytree,branches=['eventNumber'],start=0,stop=notrigs)
+
 mappers = {}
 
 hex_methods = ['oversampling', 'rebinning', 'nearest_interpolation',
@@ -41,6 +44,12 @@ for i in np.arange(notrigs):
     axs=axs.ravel()
     j=0
     for method in hex_methods:
+        print(deadarr,np.shape(deadarr))
+        print(deadarr[i][0])
+        print(np.shape(deadarr[i][0]))
+        deadvals=deadarr[i][0][0][:499]
+        print(np.where(deadvals!=0))
+        raise KeyboardInterrupt
         image=imarr[i][0][0][:499]
         image=np.expand_dims(image,1)
         image = mappers[method].map_image(image, cam)
