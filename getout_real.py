@@ -43,15 +43,13 @@ def dedead(imarr,tel,pixel):
         if imarr[i][0][tel][pixel+1] !=0.0 and imarr[i][0][tel][pixel-1] !=0.0:
             imarr[i][0][tel][pixel]=(imarr[i][0][tel][pixel+1]+imarr[i][0][tel][pixel-1])/2.0
         elif imarr[i][0][tel][pixel+2] !=0.0 and imarr[i][0][tel][pixel-2] !=0.0:
-            imarr[i][0][tel][pixel]=(imarr[i][0][0][k+2]+imarr[i][0][tel][pixel-2])/2.0
+            imarr[i][0][tel][pixel]=(imarr[i][0][tel][pixel+2]+imarr[i][0][tel][pixel-2])/2.0
         elif imarr[i][0][tel][pixel+3] !=0.0 and imarr[i][0][tel][pixel-3] !=0.0:
-            imarr[i][0][tel][pixel]=(imarr[i][0][0][k+3]+imarr[i][0][tel][pixel-3])/2.0
+            imarr[i][0][tel][pixel]=(imarr[i][0][tel][pixel+3]+imarr[i][0][tel][pixel-3])/2.0
         else:
             print('Dead pixel not corrected: '+str(k))
-            continue
     except IndexError:
         print('Index error')
-        continue
     return imarr
 
 def extract_im(mappers,i,method,deadarr,imarr,tel,cam):
@@ -73,7 +71,7 @@ for method in hex_methods:
 
 for i in np.arange(notrigs):
 
-    to_hdf['id'].append(evarr[i])
+    to_hdf['id'].append(evarr[i][0])
     
     for method in hex_methods:
         image1=extract_im(mappers,i,method,deadarr,imarr,0,cam)
@@ -87,7 +85,7 @@ for i in np.arange(notrigs):
         out_arr[3,:,:,:]=image4
         to_hdf[method].append(out_arr)
         
-h5file = tables.open_file(runcode+'.hdf5', mode="w")
+h5file = tables.open_file(str(runcode)+'_processed.hdf5', mode="w")
 root = h5file.root
 
 for keyval in to_hdf.keys():
@@ -95,4 +93,6 @@ for keyval in to_hdf.keys():
     h5file.create_array(root,keyval,np.float32(to_hdf[keyval]),keyval)
 
 h5file.close()
-f.close()
+f.Close()
+
+

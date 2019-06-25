@@ -16,7 +16,7 @@ if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
 gammafile='/lustre/fs19/group/cta/users/sspencer/ver/testgamma.dst.root'
 protonfile=''
 cam = 'VERITAS'
-runcode=64080
+runcode=Testmixture
 nochannels=499
 notrigs=100
 
