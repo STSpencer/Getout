@@ -1,3 +1,5 @@
+import sys 
+sys.argv.append( '-b-' )
 import ROOT
 import numpy as np
 from root_numpy import tree2array
@@ -9,15 +11,17 @@ from image_mapping import ImageMapper
 import tables
 
 ROOT.ROOT.EnableImplicitMT()
-
+ROOT.gROOT.SetBatch(True)
 if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
     print("Problem loading EventDisplay libraries - please check this before proceeding")
 
-gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/testgamma.dst.root'
+gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/Testgamma3.dst.root'
 protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/testproton.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
 cam = 'VERITAS'
 runcode='Testmixture'
+runname='/lustre/fs19/group/cta/users/sspencer/Processed/'+runcode+'_'
 nochannels=499
+nofiles=100
 
 f=ROOT.TFile.Open(protonfile,'read')
 mytree=f.Get("dst")
@@ -52,7 +56,8 @@ def dedead(imarr,tel,pixel):
         elif imarr[i][0][tel][pixel+3] !=0.0 and imarr[i][0][tel][pixel-3] !=0.0:
             imarr[i][0][tel][pixel]=(imarr[i][0][tel][pixel+3]+imarr[i][0][tel][pixel-3])/2.0
         else:
-            print('Dead pixel not corrected: '+str(pixel))
+            pass
+            #print('Dead pixel not corrected: '+str(pixel))
     except IndexError:
         print('Index error')
     return imarr
@@ -75,75 +80,78 @@ for method in hex_methods:
     mapping_method = {cam: method for cam in hex_cams}
     mappers[method] = ImageMapper(mapping_method=mapping_method)
 
-print('Processing Protons')
-f=ROOT.TFile.Open(protonfile,'read')
-mytree=f.Get("dst")
+trigsperfile=int(float(notrigs)/float(nofiles))
 
-imarr=tree2array(mytree,branches=['sum'],start=0,stop=notrigs)
-deadarr=tree2array(mytree,branches=['dead'],start=0,stop=notrigs)
-evarr=tree2array(mytree,branches=['eventNumber'],start=0,stop=notrigs)
+for runno in np.arange(nofiles):
+    startev=runno*trigsperfile
+    stopev=(runno+1)*trigsperfile
+    print('Processing Protons')
+    f=ROOT.TFile.Open(protonfile,'read')
+    mytree=f.Get("dst")
 
-for i in np.arange(notrigs):
+    imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
+    deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
+    evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
+    
+    for i in np.arange(notrigsperfile):
+        
+        to_hdf['id'].append(notrigsperfile*runno+evarr[i][0])
+        to_hdf['isGamma'].append(0) #0 is proton, 1 is gamma
 
-    to_hdf['id'].append(evarr[i][0])
-    to_hdf['isGamma'].append(0) #0 is proton, 1 is gamma
+        for method in hex_methods:
+            image1=extract_im(mappers,i,method,deadarr,imarr,0,cam) #Should set deadarr to None when MC comes through
+            image2=extract_im(mappers,i,method,deadarr,imarr,1,cam)
+            image3=extract_im(mappers,i,method,deadarr,imarr,2,cam)
+            image4=extract_im(mappers,i,method,deadarr,imarr,3,cam)
+            out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
+            out_arr[0,:,:,:]=image1
+            out_arr[1,:,:,:]=image2
+            out_arr[2,:,:,:]=image3
+            out_arr[3,:,:,:]=image4
+            to_hdf[method].append(out_arr)
 
-    for method in hex_methods:
-        image1=extract_im(mappers,i,method,deadarr,imarr,0,cam) #Should set deadarr to None when MC comes through
-        image2=extract_im(mappers,i,method,deadarr,imarr,1,cam)
-        image3=extract_im(mappers,i,method,deadarr,imarr,2,cam)
-        image4=extract_im(mappers,i,method,deadarr,imarr,3,cam)
-        out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
-        out_arr[0,:,:,:]=image1
-        out_arr[1,:,:,:]=image2
-        out_arr[2,:,:,:]=image3
-        out_arr[3,:,:,:]=image4
-        to_hdf[method].append(out_arr)
+    f.Close()
 
-f.Close()
+    print('Processing Gammas')
+    f=ROOT.TFile.Open(gammafile,'read')
 
-print('Processing Gammas')
-f=ROOT.TFile.Open(gammafile,'read')
+    mytree=f.Get("dst")
 
-mytree=f.Get("dst")
+    imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
+    evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
 
-imarr=tree2array(mytree,branches=['sum'],start=0,stop=notrigs)
-evarr=tree2array(mytree,branches=['eventNumber'],start=0,stop=notrigs)
+    for i in np.arange(notrigsperfile):
+        
+        to_hdf['id'].append(notrigsperfile*(runno+1)+evarr[i][0])
+        to_hdf['isGamma'].append(1)
+        
+        for method in hex_methods:
+            image1=extract_im(mappers,i,method,None,imarr,0,cam)
+            image2=extract_im(mappers,i,method,None,imarr,1,cam)
+            image3=extract_im(mappers,i,method,None,imarr,2,cam)
+            image4=extract_im(mappers,i,method,None,imarr,3,cam)
+            out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
+            out_arr[0,:,:,:]=image1
+            out_arr[1,:,:,:]=image2
+            out_arr[2,:,:,:]=image3
+            out_arr[3,:,:,:]=image4
+            to_hdf[method].append(out_arr)
 
-for i in np.arange(notrigs):
+    f.Close()
 
-    to_hdf['id'].append(evarr[i][0]+notrigs)
-    to_hdf['isGamma'].append(1)
+    randomize = np.arange(len(to_hdf['isGamma'])) #Randomization Code
+    np.random.shuffle(randomize)
 
-    for method in hex_methods:
-        image1=extract_im(mappers,i,method,None,imarr,0,cam)
-        image2=extract_im(mappers,i,method,None,imarr,1,cam)
-        image3=extract_im(mappers,i,method,None,imarr,2,cam)
-        image4=extract_im(mappers,i,method,None,imarr,3,cam)
-        out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
-        out_arr[0,:,:,:]=image1
-        out_arr[1,:,:,:]=image2
-        out_arr[2,:,:,:]=image3
-        out_arr[3,:,:,:]=image4
-        to_hdf[method].append(out_arr)
+    print('Writing HDF5')
+    h5file = tables.open_file(runname+str(runno)+'_SIM.hdf5', mode="w")
+    root = h5file.root
+    
+    for keyval in to_hdf.keys():
+        if keyval=='id' or keyval=='isGamma':
+            to_hdf[keyval]=np.asarray(to_hdf[keyval],dtype='int32')
+        else:
+            to_hdf[keyval]=np.asarray(to_hdf[keyval],dtype='float32')
+        to_hdf[keyval]=to_hdf[keyval][randomize]
+        h5file.create_array(root,keyval,to_hdf[keyval],keyval)
 
-f.Close()
-
-randomize = np.arange(len(to_hdf['isGamma'])) #Randomization Code
-np.random.shuffle(randomize)
-
-print('Writing HDF5')
-h5file = tables.open_file(str(runcode)+'_processed.hdf5', mode="w")
-root = h5file.root
-
-for keyval in to_hdf.keys():
-    if keyval=='id' or keyval=='isGamma':
-        to_hdf[keyval]=np.asarray(to_hdf[keyval],dtype='int32')
-    else:
-        to_hdf[keyval]=np.asarray(to_hdf[keyval],dtype='float32')
-    to_hdf[keyval]=to_hdf[keyval][randomize]
-    h5file.create_array(root,keyval,to_hdf[keyval],keyval)
-
-h5file.close()
-
-
+    h5file.close()
