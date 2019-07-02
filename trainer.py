@@ -43,7 +43,6 @@ from matplotlib.pyplot import cm
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
 from keras.metrics import binary_accuracy
-from deepexplain.tensorflow import DeepExplain
 from sklearn.metrics import roc_curve, auc
 from net_utils import *
 
@@ -51,35 +50,50 @@ plt.ioff()
 
 # Finds all the hdf5 files in a given directory
 global onlyfiles
-onlyfiles = glob.glob('/store/spencers/Data/pointrun3/*.hdf5')
-runname = 'timeonlytest'
-shilonflag = True #Whether to sort telescopes in the LSTM using integrated charge or median arrival time
+onlyfiles = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
+runname = 'vtest1'
+hexmethod='rebinning'
+
 global Trutharr
 Trutharr = []
 Train2=[]
+print(onlyfiles,len(onlyfiles))
 
 # Find true event classes for test data to construct confusion matrix.
-for file in onlyfiles[140:239]:
+for file in onlyfiles[1:4]:
+    print(file)
     inputdata = h5py.File(file, 'r')
-    labelsarr = np.asarray(inputdata['event_label'][:])
+    for key in inputdata.keys():
+        print(key,np.shape(inputdata[key]))
+    labelsarr = np.asarray(inputdata['isGamma'][:])
     for value in labelsarr:
         Trutharr.append(value)
     inputdata.close()
 
-for file in onlyfiles[:140]:
+for file in onlyfiles[4:7]:
+    print(file)
     inputdata = h5py.File(file, 'r')
-    labelsarr = np.asarray(inputdata['event_label'][:])
+    labelsarr = np.asarray(inputdata['isGamma'][:])
     for value in labelsarr:
         Train2.append(value)
     inputdata.close()
 
 print('lentruth', len(Trutharr))
 print('lentrain',len(Train2))
+raise KeyboardInterrupt
+
 # Define model architecture.
+if hexmethod in ['axial_addressing','image_shifting']:
+    inpshape=(None,27,27,1)
+elif hexmethod in ['bicubic_interpolation','nearest_interpolation','oversampling','rebinning']:
+    inpshape=(None,54,54,1)
+else:
+    print('Invalid Hexmethod')
+    raise KeyboardInterrupt
 
 model = Sequential()
 model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     input_shape=(None, 32, 32, 1),
+                     input_shape=inpshape,
                      padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
 model.add(Dropout(0.5))
 model.add(BatchNormalization())
@@ -131,7 +145,7 @@ plot_model(
 history = model.fit_generator(
     generate_training_sequences(onlyfiles,
         50,
-        'Train',shilonflag),
+                                'Train',hexmethod),
     steps_per_epoch=400,
     epochs=20,
     verbose=1,
@@ -166,7 +180,7 @@ print('Predicting')
 pred = model.predict_generator(
     generate_training_sequences(onlyfiles,
         50,
-        'Test',shilonflag),
+        'Test',hexmethod),
     verbose=0,
      use_multiprocessing=False,
     steps=200)
@@ -176,8 +190,7 @@ print('Evaluating')
 
 score = model.evaluate_generator(
     generate_training_sequences(onlyfiles,
-        50,
-        'Test',shilonflag),
+        50,'Test',hexmethod),
     use_multiprocessing=False,
     steps=200)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
