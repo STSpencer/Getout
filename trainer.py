@@ -62,7 +62,10 @@ print(onlyfiles,len(onlyfiles))
 # Find true event classes for test data to construct confusion matrix.
 for file in onlyfiles[1:4]:
     print(file)
-    inputdata = h5py.File(file, 'r')
+    try:
+        inputdata = h5py.File(file, 'r')
+    except OSError:
+        continue
     for key in inputdata.keys():
         print(key,np.shape(inputdata[key]))
     labelsarr = np.asarray(inputdata['isGamma'][:])
@@ -72,7 +75,10 @@ for file in onlyfiles[1:4]:
 
 for file in onlyfiles[4:7]:
     print(file)
-    inputdata = h5py.File(file, 'r')
+    try:
+        inputdata = h5py.File(file, 'r')
+    except OSError:
+        continue
     labelsarr = np.asarray(inputdata['isGamma'][:])
     for value in labelsarr:
         Train2.append(value)
@@ -80,7 +86,7 @@ for file in onlyfiles[4:7]:
 
 print('lentruth', len(Trutharr))
 print('lentrain',len(Train2))
-raise KeyboardInterrupt
+
 
 # Define model architecture.
 if hexmethod in ['axial_addressing','image_shifting']:
@@ -146,8 +152,8 @@ history = model.fit_generator(
     generate_training_sequences(onlyfiles,
         50,
                                 'Train',hexmethod),
-    steps_per_epoch=400,
-    epochs=20,
+    steps_per_epoch=235,
+    epochs=5,
     verbose=1,
     use_multiprocessing=False,
     shuffle=False)
@@ -183,7 +189,7 @@ pred = model.predict_generator(
         'Test',hexmethod),
     verbose=0,
      use_multiprocessing=False,
-    steps=200)
+    steps=156)
 np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
 
 print('Evaluating')
@@ -192,7 +198,7 @@ score = model.evaluate_generator(
     generate_training_sequences(onlyfiles,
         50,'Test',hexmethod),
     use_multiprocessing=False,
-    steps=200)
+    steps=156)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
 
 print('Test loss:', score[0])

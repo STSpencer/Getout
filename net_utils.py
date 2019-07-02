@@ -187,23 +187,29 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
     i = 0  # No. events loaded in total
 
     if batchflag == 'Train':
-        filelist = onlyfiles[0:4]
+        filelist = onlyfiles[1:4]
         print('train', filelist)
         global trainevents
         global train2
         for file in filelist:
-            inputdata = h5py.File(file, 'r')
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
             trainevents = trainevents + inputdata['isGamma'][:].tolist()
             train2 = train2 + inputdata['id'][:].tolist()
             inputdata.close()
 
     elif batchflag == 'Test':
-        filelist = onlyfiles[4:6]
+        filelist = onlyfiles[4:7]
         print('test', filelist)
         global testevents
         global test2
         for file in filelist:
-            inputdata = h5py.File(file, 'r')
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
             testevents = testevents + inputdata['isGamma'][:].tolist()
             test2 = test2 + inputdata['id'][:].tolist()
             inputdata.close()
