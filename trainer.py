@@ -52,7 +52,7 @@ plt.ioff()
 global onlyfiles
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
 runname = 'vtest1'
-hexmethod='rebinning'
+hexmethod='axial_addressing'
 
 global Trutharr
 Trutharr = []
@@ -60,7 +60,7 @@ Train2=[]
 print(onlyfiles,len(onlyfiles))
 
 # Find true event classes for test data to construct confusion matrix.
-for file in onlyfiles[1:4]:
+for file in onlyfiles[7:8]:
     print(file)
     try:
         inputdata = h5py.File(file, 'r')
@@ -73,7 +73,7 @@ for file in onlyfiles[1:4]:
         Trutharr.append(value)
     inputdata.close()
 
-for file in onlyfiles[4:7]:
+for file in onlyfiles[1:6]:
     print(file)
     try:
         inputdata = h5py.File(file, 'r')
@@ -98,39 +98,39 @@ else:
     raise KeyboardInterrupt
 
 model = Sequential()
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+model.add(ConvLSTM2D(filters=20, kernel_size=(3, 3),
                      input_shape=inpshape,
                      padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
 model.add(Dropout(0.5))
 model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
+model.add(ConvLSTM2D(filters=20, kernel_size=(3, 3),
+                    padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
 model.add(Dropout(0.5))
-model.add(BatchNormalization())
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True))
-model.add(Dropout(0.5))
-model.add(BatchNormalization())
+#model.add(BatchNormalization())
+#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     #padding='same', return_sequences=True))
+#model.add(Dropout(0.5))
+#model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True))
-model.add(Dropout(0.5))
-model.add(BatchNormalization())
+#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     #padding='same', return_sequences=True))
+#model.add(Dropout(0.5))
+#model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True))
-model.add(Dropout(0.5))
+#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     #padding='same', return_sequences=True))
+#model.add(Dropout(0.5))
 model.add(BatchNormalization())
 model.add(GlobalAveragePooling3D())
-model.add(Dense(2, activation='softmax'))
+model.add(Dense(2, activation='sigmoid'))
 opt = keras.optimizers.Adadelta()
 
 # Compile the model
 model.compile(
-    loss='categorical_crossentropy',
+    loss='binary_crossentropy',
     optimizer=opt,
-    metrics=['categorical_accuracy'])
+    metrics=['binary_accuracy'])
 
 early_stop = EarlyStopping(
     monitor='val_loss',
@@ -153,17 +153,17 @@ history = model.fit_generator(
         50,
                                 'Train',hexmethod),
     steps_per_epoch=235,
-    epochs=5,
+    epochs=10,
     verbose=1,
     use_multiprocessing=False,
-    shuffle=False)
+    shuffle=False,validation_data=generate_training_sequences(onlyfiles,50,'Valid',hexmethod),validation_steps=78)
 
 # Plot training accuracy/loss.
 fig = plt.figure()
 plt.subplot(2, 1, 1)
 print(history.history)
-plt.plot(history.history['categorical_accuracy'], label='Train')
-# plt.plot(history.history['val_binary_accuracy'],label='Validation')
+plt.plot(history.history['binary_accuracy'], label='Train')
+plt.plot(history.history['val_binary_accuracy'],label='Validation')
 plt.title('Model Accuracy')
 plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
@@ -171,7 +171,7 @@ plt.legend(loc='lower right')
 
 plt.subplot(2, 1, 2)
 plt.plot(history.history['loss'], label='Train')
-# plt.plot(history.history['val_loss'],label='Validation')
+plt.plot(history.history['val_loss'],label='Validation')
 plt.title('Model Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
@@ -189,7 +189,7 @@ pred = model.predict_generator(
         'Test',hexmethod),
     verbose=0,
      use_multiprocessing=False,
-    steps=156)
+    steps=78)
 np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
 
 print('Evaluating')
