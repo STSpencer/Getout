@@ -1,0 +1,435 @@
+Traceback (most recent call last):
+  File "getout_real.py", line 19, in <module>
+    f=ROOT.TFile.Open(inputfile,'read')
+NameError: name 'inputfile' is not defined
+Traceback (most recent call last):
+  File "getout_real.py", line 20, in <module>
+    evarr=tree2array(mytree,branches=['eventNumber'])
+NameError: name 'mytree' is not defined
+Traceback (most recent call last):
+  File "getout_real.py", line 22, in <module>
+    f.close()
+AttributeError: TFile object has no attribute 'close'
+Processing Data: 0
+Writing HDF5
+Traceback (most recent call last):
+  File "getout_real.py", line 106, in <module>
+    h5file = tables.open_file(runname+str(runno)+'_REAL.hdf5', mode="w")
+  File "/afs/ifh.de/user/s/sspencer/.local/lib/python3.6/site-packages/tables/file.py", line 320, in open_file
+    return File(filename, mode, title, root_uep, filters, **kwargs)
+  File "/afs/ifh.de/user/s/sspencer/.local/lib/python3.6/site-packages/tables/file.py", line 784, in __init__
+    self._g_new(filename, mode, **params)
+  File "tables/hdf5extension.pyx", line 374, in tables.hdf5extension.File._g_new
+  File "/afs/ifh.de/user/s/sspencer/.local/lib/python3.6/site-packages/tables/utils.py", line 175, in check_file_access
+    raise IOError("``%s`` does not exist" % (parentname,))
+OSError: ``/lustre/fs19/group/cta/user/sspencer/Real`` does not exist
+Processing Data: 0
+Writing HDF5
+Processing Data: 1
+Writing HDF5
+Processing Data: 2
+Writing HDF5
+Processing Data: 3
+Writing HDF5
+Processing Data: 4
+Writing HDF5
+Processing Data: 5
+Writing HDF5
+Processing Data: 6
+Writing HDF5
+Processing Data: 7
+Writing HDF5
+Processing Data: 8
+Writing HDF5
+Processing Data: 9
+Writing HDF5
+Processing Data: 10
+Writing HDF5
+Processing Data: 11
+Writing HDF5
+Processing Data: 12
+Writing HDF5
+Processing Data: 13
+Writing HDF5
+Processing Data: 14
+Writing HDF5
+Processing Data: 15
+Writing HDF5
+Processing Data: 16
+Writing HDF5
+Processing Data: 17
+Writing HDF5
+Processing Data: 18
+Writing HDF5
+Processing Data: 19
+Writing HDF5
+Processing Data: 20
+Writing HDF5
+Processing Data: 21
+Writing HDF5
+Processing Data: 22
+Writing HDF5
+Processing Data: 23
+Writing HDF5
+Processing Data: 24
+Writing HDF5
+Processing Data: 25
+Writing HDF5
+Processing Data: 26
+Writing HDF5
+Processing Data: 27
+Writing HDF5
+Processing Data: 28
+Writing HDF5
+Processing Data: 29
+Writing HDF5
+Processing Data: 30
+Writing HDF5
+Processing Data: 31
+Writing HDF5
+Processing Data: 32
+Writing HDF5
+Processing Data: 33
+Writing HDF5
+Processing Data: 34
+Writing HDF5
+Processing Data: 35
+Writing HDF5
+Processing Data: 36
+Writing HDF5
+Processing Data: 37
+Writing HDF5
+Processing Data: 38
+Writing HDF5
+Processing Data: 39
+Writing HDF5
+Processing Data: 40
+Writing HDF5
+Processing Data: 41
+Writing HDF5
+Processing Data: 42
+Writing HDF5
+Processing Data: 43
+Writing HDF5
+Processing Data: 44
+Writing HDF5
+Processing Data: 45
+Writing HDF5
+Processing Data: 46
+Writing HDF5
+Processing Data: 47
+Writing HDF5
+Processing Data: 48
+Writing HDF5
+Processing Data: 49
+Writing HDF5
+Processing Data: 50
+Writing HDF5
+Processing Data: 51
+Writing HDF5
+Processing Data: 52
+Writing HDF5
+Processing Data: 53
+Writing HDF5
+Processing Data: 54
+Writing HDF5
+Processing Data: 55
+Writing HDF5
+Processing Data: 56
+Writing HDF5
+Processing Data: 57
+Writing HDF5
+Processing Data: 58
+Writing HDF5
+Processing Data: 59
+Writing HDF5
+Processing Data: 60
+Writing HDF5
+Processing Data: 61
+Writing HDF5
+Processing Data: 62
+Writing HDF5
+Processing Data: 63
+Writing HDF5
+Processing Data: 64
+Writing HDF5
+Processing Data: 65
+Writing HDF5
+Processing Data: 66
+Writing HDF5
+Processing Data: 67
+Writing HDF5
+Processing Data: 68
+Writing HDF5
+Processing Data: 69
+Writing HDF5
+Processing Data: 70
+Writing HDF5
+Processing Data: 71
+Writing HDF5
+Processing Data: 72
+Writing HDF5
+Processing Data: 73
+Writing HDF5
+Processing Data: 74
+Writing HDF5
+Processing Data: 75
+Writing HDF5
+Processing Data: 76
+Writing HDF5
+Processing Data: 77
+Writing HDF5
+Processing Data: 78
+Writing HDF5
+Processing Data: 79
+Writing HDF5
+Processing Data: 80
+Writing HDF5
+Processing Data: 81
+Writing HDF5
+Processing Data: 82
+Writing HDF5
+Processing Data: 83
+Writing HDF5
+Processing Data: 84
+Writing HDF5
+Processing Data: 85
+Writing HDF5
+Processing Data: 86
+Writing HDF5
+Processing Data: 87
+Writing HDF5
+Processing Data: 88
+Writing HDF5
+Processing Data: 89
+Writing HDF5
+Processing Data: 90
+Writing HDF5
+Processing Data: 91
+Writing HDF5
+Processing Data: 92
+Writing HDF5
+Processing Data: 93
+Writing HDF5
+Processing Data: 94
+Writing HDF5
+Processing Data: 95
+Writing HDF5
+Processing Data: 96
+Writing HDF5
+Processing Data: 97
+Writing HDF5
+Processing Data: 98
+Writing HDF5
+Processing Data: 99
+Writing HDF5
+Processing Data: 0
+Writing HDF5
+Processing Data: 1
+Writing HDF5
+Processing Data: 2
+Writing HDF5
+Processing Data: 3
+Writing HDF5
+Processing Data: 4
+Writing HDF5
+Processing Data: 5
+Writing HDF5
+Processing Data: 6
+Writing HDF5
+Processing Data: 7
+Writing HDF5
+Processing Data: 8
+Writing HDF5
+Processing Data: 9
+Writing HDF5
+Processing Data: 10
+Writing HDF5
+Processing Data: 11
+Writing HDF5
+Processing Data: 12
+Writing HDF5
+Processing Data: 13
+Writing HDF5
+Processing Data: 14
+Writing HDF5
+Processing Data: 15
+Writing HDF5
+Processing Data: 16
+Writing HDF5
+Processing Data: 17
+Writing HDF5
+Processing Data: 18
+Writing HDF5
+Processing Data: 19
+Writing HDF5
+Processing Data: 20
+Writing HDF5
+Processing Data: 21
+Writing HDF5
+Processing Data: 22
+Writing HDF5
+Processing Data: 23
+Writing HDF5
+Processing Data: 24
+Writing HDF5
+Processing Data: 25
+Writing HDF5
+Processing Data: 26
+Writing HDF5
+Processing Data: 27
+Writing HDF5
+Processing Data: 28
+Writing HDF5
+Processing Data: 29
+Writing HDF5
+Processing Data: 30
+Writing HDF5
+Processing Data: 31
+Writing HDF5
+Processing Data: 32
+Writing HDF5
+Processing Data: 33
+Writing HDF5
+Processing Data: 34
+Writing HDF5
+Processing Data: 35
+Writing HDF5
+Processing Data: 36
+Writing HDF5
+Processing Data: 37
+Writing HDF5
+Processing Data: 38
+Writing HDF5
+Processing Data: 39
+Writing HDF5
+Processing Data: 40
+Writing HDF5
+Processing Data: 41
+Writing HDF5
+Processing Data: 42
+Writing HDF5
+Processing Data: 43
+Writing HDF5
+Processing Data: 44
+Writing HDF5
+Processing Data: 45
+Writing HDF5
+Processing Data: 46
+Writing HDF5
+Processing Data: 47
+Writing HDF5
+Processing Data: 48
+Writing HDF5
+Processing Data: 49
+Writing HDF5
+Processing Data: 50
+Traceback (most recent call last):
+  File "getout_real.py", line 88, in <module>
+    to_hdf['id'].append(trigsperfile*runno+evarr[i][0])
+IndexError: index 0 is out of bounds for axis 0 with size 0
+Processing Data: 0
+Writing HDF5
+Processing Data: 1
+Writing HDF5
+Processing Data: 2
+Writing HDF5
+Processing Data: 3
+Writing HDF5
+Processing Data: 4
+Writing HDF5
+Processing Data: 5
+Writing HDF5
+Processing Data: 6
+Writing HDF5
+Processing Data: 7
+Writing HDF5
+Processing Data: 8
+Writing HDF5
+Processing Data: 9
+Writing HDF5
+Processing Data: 10
+Writing HDF5
+Processing Data: 11
+Writing HDF5
+Processing Data: 12
+Writing HDF5
+Processing Data: 13
+Writing HDF5
+Processing Data: 14
+Writing HDF5
+Processing Data: 15
+Writing HDF5
+Processing Data: 16
+Writing HDF5
+Processing Data: 17
+Writing HDF5
+Processing Data: 18
+Writing HDF5
+Processing Data: 19
+Writing HDF5
+Processing Data: 20
+Writing HDF5
+Processing Data: 21
+Writing HDF5
+Processing Data: 22
+Writing HDF5
+Processing Data: 23
+Writing HDF5
+Processing Data: 24
+Writing HDF5
+Processing Data: 25
+Writing HDF5
+Processing Data: 26
+Writing HDF5
+Processing Data: 27
+Writing HDF5
+Processing Data: 28
+Writing HDF5
+Processing Data: 29
+Writing HDF5
+Processing Data: 30
+Writing HDF5
+Processing Data: 31
+Writing HDF5
+Processing Data: 32
+Writing HDF5
+Processing Data: 33
+Writing HDF5
+Processing Data: 34
+Writing HDF5
+Processing Data: 35
+Writing HDF5
+Processing Data: 36
+Writing HDF5
+Processing Data: 37
+Writing HDF5
+Processing Data: 38
+Writing HDF5
+Processing Data: 39
+Writing HDF5
+Processing Data: 40
+Writing HDF5
+Processing Data: 41
+Writing HDF5
+Processing Data: 42
+Writing HDF5
+Processing Data: 43
+Writing HDF5
+Processing Data: 44
+Writing HDF5
+Processing Data: 45
+Writing HDF5
+Processing Data: 46
+Writing HDF5
+Processing Data: 47
+Writing HDF5
+Processing Data: 48
+Writing HDF5
+Processing Data: 49
+Writing HDF5
+Processing Data: 50
+Traceback (most recent call last):
+  File "getout_real.py", line 88, in <module>
+    to_hdf['id'].append(trigsperfile*runno+evarr[i][0])
+IndexError: index 0 is out of bounds for axis 0 with size 0

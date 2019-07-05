@@ -44,7 +44,6 @@ hex_methods = ['oversampling', 'rebinning', 'nearest_interpolation',
 
 hex_cams=['VERITAS']
 
-to_hdf={'id':[],'isGamma':[],'oversampling':[],'rebinning':[],'nearest_interpolation':[],'bilinear_interpolation':[],'bicubic_interpolation':[],'image_shifting':[],'axial_addressing':[]}
 
 def dedead(imarr,tel,pixel):
     '''Attempts to correct for dead pixels by setting them equal to the mean of the 1st 2nd or 3rd nearest pair of non-zero pixels'''
@@ -83,6 +82,7 @@ for method in hex_methods:
 trigsperfile=int(float(notrigs)/float(nofiles))
 
 for runno in np.arange(nofiles):
+    to_hdf={'id':[],'isGamma':[],'oversampling':[],'rebinning':[],'nearest_interpolation':[],'bilinear_interpolation':[],'bicubic_interpolation':[],'image_shifting':[],'axial_addressing':[]}
     startev=runno*trigsperfile
     stopev=(runno+1)*trigsperfile
     print('Processing Protons')
@@ -93,9 +93,9 @@ for runno in np.arange(nofiles):
     deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
     
-    for i in np.arange(notrigsperfile):
+    for i in np.arange(trigsperfile):
         
-        to_hdf['id'].append(notrigsperfile*runno+evarr[i][0])
+        to_hdf['id'].append(trigsperfile*runno+evarr[i][0])
         to_hdf['isGamma'].append(0) #0 is proton, 1 is gamma
 
         for method in hex_methods:
@@ -120,9 +120,9 @@ for runno in np.arange(nofiles):
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
 
-    for i in np.arange(notrigsperfile):
+    for i in np.arange(trigsperfile):
         
-        to_hdf['id'].append(notrigsperfile*(runno+1)+evarr[i][0])
+        to_hdf['id'].append(trigsperfile*(runno+1)+evarr[i][0])
         to_hdf['isGamma'].append(1)
         
         for method in hex_methods:

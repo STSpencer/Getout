@@ -5,7 +5,7 @@ import sys
 sys.argv.append('-b-')
 import ROOT
 import numpy as np
-from root_numpy import tree2array, root2array
+from root_numpy import tree2array, root2array,array2root
 from ROOT import gSystem, TFile, TTreeReader
 import root_numpy
 from rootpy.tree import Tree, TreeModel, FloatCol, IntCol
@@ -39,7 +39,7 @@ tree_copy.set_buffer(tree._buffer, create_branches=True)
 for entry in tree:
     # Overwrite a branch value. This changes the value that will be written to
     # the new tree but leaves the value unchanged in the original tree on disk.
-    entry.x = 3.141
+    entry.isGamma = arraytoroot(pred)
     # "entry" is actually the buffer, which is shared between both trees.
     tree_copy.Fill()
 
