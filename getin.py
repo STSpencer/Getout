@@ -21,14 +21,14 @@ predfile='prediction.npy'
 
 pred=np.load(predfile)
 
-f_copy = root_open("test_copy.root", "recreate")
+f_copy = root_open(runfile, "recreate")
 # Example from rootpy website
 
 
 # You may not know the entire model of the original tree but only the branches
 # you intend to overwrite, so I am not specifying the model=Event below as an
 # example of how to deal with this in general:
-tree_copy = Tree("test_copy")
+tree_copy = Tree("dst")
 
 # Here we specify the buffer for the new tree to use. We use the same buffer as
 # the original tree. This creates all the same branches in the new tree but
@@ -39,7 +39,7 @@ tree_copy.set_buffer(tree._buffer, create_branches=True)
 for entry in tree:
     # Overwrite a branch value. This changes the value that will be written to
     # the new tree but leaves the value unchanged in the original tree on disk.
-    entry.x = 3.141
+    entry.isGamma = arraytoroot(pred)
     # "entry" is actually the buffer, which is shared between both trees.
     tree_copy.Fill()
 
