@@ -5,7 +5,7 @@ import sys
 sys.argv.append('-b-')
 import ROOT
 import numpy as np
-from root_numpy import tree2array, root2array
+from root_numpy import tree2array, root2array,array2root
 from ROOT import gSystem, TFile, TTreeReader
 import root_numpy
 from rootpy.tree import Tree, TreeModel, FloatCol, IntCol
