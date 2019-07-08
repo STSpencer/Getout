@@ -50,7 +50,7 @@ from net_utils import *
 plt.ioff()
 
 # Finds all the hdf5 files in a given directory
-global onlyfiles
+global realdata
 realdata = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
 runname = 'vtest1'
 runcode = 64080
@@ -60,23 +60,22 @@ evlist=[]
 
 for file in realdata:
     try:
-        h5file=h5py.open(file, 'r')
+        h5file=h5py.File(file, 'r')
     except OSError:
         realdata.remove(file)
         continue
-    events=h5file['id'][:]
+    events=h5file['id'][:].tolist()
     evlist=evlist+events
+    h5file.close()
 
 noev=len(evlist)
 batchsize=50
 no_steps=int(noev/float(batchsize))
 
 global Trutharr
-print(onlyfiles,len(onlyfiles))
+print(realdata,len(realdata))
 
-print('lentruth', len(Trutharr))
-print('lentrain',len(Train2))
-
+print('No_events:',noev,'No_steps',no_steps)
 
 # Define model architecture.
 if hexmethod in ['axial_addressing','image_shifting']:
@@ -92,9 +91,8 @@ print('Predicting')
 model=load_model(modfile)
 
 pred = model.predict_generator(
-    generate_training_sequences(onlyfiles,
-        batchsize,
-        'Test',hexmethod),
+    generate_real_sequences(realdata,
+        batchsize,hexmethod),
     verbose=0,
      use_multiprocessing=False,
     steps=no_steps)

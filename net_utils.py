@@ -186,3 +186,65 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
                 Y = keras.utils.to_categorical(
                     labelsarr[batch_idxs], num_classes=2)
                 yield (np.array(X), np.array(Y))
+
+def generate_real_sequences(onlyfiles,batch_size,hexmethod):
+    """ Generates real test sequences on demand
+    """
+
+    nofiles = 0
+    i = 0  # No. events loaded in total
+    global testevents
+    global test2
+    filelist = onlyfiles
+    print('test', filelist)
+    for file in filelist:
+        try:
+            inputdata = h5py.File(file, 'r')
+        except OSError:
+            continue
+        test2 = test2 + inputdata['id'][:].tolist()
+        inputdata.close()
+
+    while True:
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            trainarr = np.asarray(inputdata[hexmethod][:, :, :, :])
+            idarr = np.asarray(inputdata['id'][:])
+            nofiles = nofiles + 1
+            inputdata.close()
+            notrigs=np.shape(trainarr)[0]
+            
+            for x in np.arange(np.shape(trainarr)[0]):
+                chargevals = []
+                for y in np.arange(4):
+                    chargevals.append(np.sum(trainarr[x,y,:,:]))
+
+                chargevals = np.argsort(chargevals)
+                chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
+                trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
+                            
+            training_sample_count = len(trainarr)
+            batches = int(training_sample_count / batch_size)
+            remainder_samples = training_sample_count % batch_size
+            i = i + len(idarr)
+            countarr = np.arange(0, len(idarr))
+
+            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
+            if remainder_samples:
+                batches = batches + 1
+
+            # generate batches of samples
+            for idx in list(range(0, batches)):
+                if idx == batches - 1:
+                    batch_idxs = countarr[idx * batch_size:]
+                else:
+                    batch_idxs = countarr[idx *
+                                          batch_size:idx *
+                                          batch_size +
+                                          batch_size]
+                X = trainarr[batch_idxs]
+                X = np.nan_to_num(X)
+                yield (np.array(X))
