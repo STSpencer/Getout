@@ -85,7 +85,7 @@ for runno in np.arange(nofiles):
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
     print(startev,stopev,trigsperfile,runno,evarr)
     for i in np.arange(trigsperfile):
-        to_hdf['eventNumber'].append(evarr[i][0])
+        to_hdf['id'].append(evarr[i][0])
         for method in hex_methods:
             image1=extract_im(mappers,i,method,deadarr,imarr,0,cam) #Should set deadarr to None when MC comes through
             image2=extract_im(mappers,i,method,deadarr,imarr,1,cam)
