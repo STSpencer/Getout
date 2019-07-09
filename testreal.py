@@ -51,7 +51,9 @@ plt.ioff()
 
 # Finds all the hdf5 files in a given directory
 global realdata
-realdata = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
+
+eventnumbers=[]
+realdata = sorted(glob.glob('/store/spencers/Data/Real/*.hdf5'))
 runname = 'vtest1'
 runcode = 64080
 hexmethod='axial_addressing'
@@ -68,12 +70,13 @@ for file in realdata:
     evlist=evlist+events
     h5file.close()
 
-noev=len(evlist)
+noev=100
+#noev=len(evlist)
 batchsize=50
 no_steps=int(noev/float(batchsize))
+print('No Steps:',no_steps)
 
 global Trutharr
-print(realdata,len(realdata))
 
 print('No_events:',noev,'No_steps',no_steps)
 
@@ -89,12 +92,20 @@ else:
 # Test the network
 print('Predicting')
 model=load_model(modfile)
-
-pred = model.predict_generator(
-    generate_real_sequences(realdata,
-        batchsize,hexmethod),
-    verbose=0,
+g2=generate_real_sequences(realdata,batchsize,hexmethod)
+pred = model.predict_generator(g2,
+    verbose=0,workers=0,
      use_multiprocessing=False,
-    steps=no_steps)
+                               steps=no_steps)
 
 np.save('/home/spencers/predictions/'+str(runcode)+'_'+runname+'_predictions_REAL.npy', pred)
+
+gen=generate_real_sequences(realdata,batchsize,hexmethod)
+
+for i in np.arange(no_steps):
+    outp=next(gen)
+    #print(i,events[1])
+    eventnumbers=eventnumbers+outp[1]
+
+np.save('/home/spencers/events/'+str(runcode)+'_'+runname+'_eventnos_REAL.npy', eventnumbers)
+print(len(pred),len(eventnumbers))
