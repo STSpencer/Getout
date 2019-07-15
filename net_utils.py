@@ -190,7 +190,6 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
 def generate_real_sequences(onlyfiles,batch_size,hexmethod):
     """ Generates real test sequences on demand
     """
-
     nofiles = 0
     i = 0  # No. events loaded in total
     global testevents
@@ -246,5 +245,7 @@ def generate_real_sequences(onlyfiles,batch_size,hexmethod):
                                           batch_size +
                                           batch_size]
                 X = trainarr[batch_idxs]
+                events=idarr[batch_idxs]
+                Y=events.tolist()
                 X = np.nan_to_num(X)
-                yield (np.array(X))
+                yield (np.array(X),Y)

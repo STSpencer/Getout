@@ -155,6 +155,7 @@ history = model.fit_generator(
     steps_per_epoch=235,
     epochs=10,
     verbose=1,
+    workers=0,
     use_multiprocessing=False,
     shuffle=False,validation_data=generate_training_sequences(onlyfiles,50,'Valid',hexmethod),validation_steps=78)
 
@@ -187,7 +188,7 @@ pred = model.predict_generator(
     generate_training_sequences(onlyfiles,
         50,
         'Test',hexmethod),
-    verbose=0,
+    verbose=0,workers=0,
      use_multiprocessing=False,
     steps=78)
 np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
@@ -196,7 +197,7 @@ print('Evaluating')
 
 score = model.evaluate_generator(
     generate_training_sequences(onlyfiles,
-        50,'Test',hexmethod),
+        50,'Test',workers=0,hexmethod),
     use_multiprocessing=False,
     steps=156)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
