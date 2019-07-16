@@ -5,7 +5,7 @@ import sys
 sys.argv.append('-b-')
 import ROOT
 import numpy as np
-from root_numpy import tree2array, root2array,array2root,list_trees,list_branches,array2tree,array2root
+from root_numpy import tree2array, root2array,array2root,list_trees,list_branches,array2tree,array2root,list_structures,hist2array,root2rec,list_directories
 from ROOT import gSystem, TFile, TTreeReader
 import root_numpy
 from rootpy.tree import Tree, TreeModel, FloatCol, IntCol
@@ -31,8 +31,46 @@ print(np.shape(pred),np.shape(eventnumbers))
 rootfile = TFile(runfile,'read')
 tdict={}
 tlist=list_trees(runfile)
+rootfile.cd()
+for h in rootfile.GetListOfKeys():
+    h2=h.ReadObj()
+    print(h2.ClassName(),h2.GetName())
+    for o in h2.GetListOfKeys():
+        o2=o.ReadObj()
+        print(o2.ClassName(),o2.GetName())
+        for p in o2.GetListOfKeys():
+            p2=p.ReadObj()
+            print(p2.ClassName(),p2.GetName())
+            try:
+                for q in p2.GetListOfKeys():
+                    q2=q.ReadObj()
+                    print(h.GetName()+'/'+o.GetName()+'/'+p.GetName()+'/'+q.GetName())
+                    if isinstance(q,(ROOT.TH1D,ROOT.TH1,ROOT.TH1F,ROOT.TBits,ROOT.TVectorT,ROOT.VGammaHadronCuts)
+                    print(q2.ClassName(),q2.GetName())
+            except AttributeError:
+                continue
+
+
 for k in tlist:
     tdict[k]=tree2array(rootfile.Get(k))
+
+    blist=list_branches(runfile,treename=k)
+    jlist=list_directories(runfile)
+    print(blist,jlist)
+    raise KeyboardInterrupt
+    for j in jlist:
+        try:
+            print(k+'/'+j)
+            hist=hist2array(k+'/'+j,copy=True)
+            #hist=root2array(runfile,treename=k)
+            print(hist,outfile)
+            rooarr=array2root(hist,outfile,treename=k,mode='update')
+            print(np.shape(hist))
+        except TypeError: #IE if a ttree and not a hist
+            hist=root2array(runfile,treename=k)
+            print('TypeError')
+            continue
+
 print(tdict.keys())
 
 onregion=tdict['run_64080/stereo/data_on']
