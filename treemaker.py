@@ -10,9 +10,10 @@ from ROOT import gSystem, TFile, TTreeReader
 import root_numpy
 from rootpy.tree import Tree, TreeModel, FloatCol, IntCol
 from rootpy.io import root_open
+import os
 
-ROOT.ROOT.EnableImplicitMT()
-ROOT.gROOT.SetBatch(True)
+#ROOT.ROOT.EnableImplicitMT()
+#ROOT.gROOT.SetBatch(True)
 if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
     print ("Problem with evndisp")
 
@@ -20,6 +21,8 @@ runfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/64080anasum.root'
 predfile='/lustre/fs19/group/cta/users/sspencer/predictions/64080_vtest1_predictions_REAL.npy'
 evfile='/lustre/fs19/group/cta/users/sspencer/events/64080_vtest1_eventnos_REAL.npy'
 outfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/64080_DL.root'
+
+os.system('rm '+outfile) #Delete any existing room files with output name, stops issues with rewriting root files
 
 pred=np.load(predfile)
 eventnumbers=np.load(evfile)
@@ -51,13 +54,13 @@ for x in np.arange(len(offregion)):
         continue
     offregion[x][-2]=np.argmax(pred[evloc])
 
-output=root_open(outfile)
+
 rootfile.Close()
-print(tdict.keys())
 
 for k in tdict.keys():
-    rooarr=array2tree(tdict[k],name=k)
-    rooarr.Write()
-    rooarr.Delete()
+    rooarr=array2root(tdict[k],outfile,treename=k,mode='update')
+    #rooarr.Write()
+    #rooarr.Delete()
 
-output.Close()
+#output.Write()
+#output.Close()
