@@ -70,8 +70,8 @@ for file in realdata:
     evlist=evlist+events
     h5file.close()
 
-noev=100
-#noev=len(evlist)
+#noev=100
+noev=len(evlist)
 batchsize=50
 no_steps=int(noev/float(batchsize))
 print('No Steps:',no_steps)
@@ -93,10 +93,10 @@ else:
 print('Predicting')
 model=load_model(modfile)
 g2=generate_real_sequences(realdata,batchsize,hexmethod)
-pred = model.predict_generator(g2,
+pred = model.predict_generator(1,
     verbose=0,workers=0,
      use_multiprocessing=False,
-                               steps=no_steps)
+                               steps=noev)
 
 np.save('/home/spencers/predictions/'+str(runcode)+'_'+runname+'_predictions_REAL.npy', pred)
 

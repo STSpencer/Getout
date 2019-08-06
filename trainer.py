@@ -153,7 +153,7 @@ history = model.fit_generator(
         50,
                                 'Train',hexmethod),
     steps_per_epoch=235,
-    epochs=10,
+    epochs=5,
     verbose=1,
     workers=0,
     use_multiprocessing=False,
@@ -186,20 +186,16 @@ plt.savefig('/home/spencers/Figures/'+runname+'trainlog.png')
 print('Predicting')
 pred = model.predict_generator(
     generate_training_sequences(onlyfiles,
-        50,
+        1,
         'Test',hexmethod),
     verbose=0,workers=0,
      use_multiprocessing=False,
-    steps=78)
+    steps=len(Trutharr))
 np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
 
 print('Evaluating')
 
-score = model.evaluate_generator(
-    generate_training_sequences(onlyfiles,
-        50,'Test',workers=0,hexmethod),
-    use_multiprocessing=False,
-    steps=156)
+score = model.evaluate_generator(generate_training_sequences(onlyfiles,50,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=156)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
 
 print('Test loss:', score[0])
@@ -209,3 +205,41 @@ print('Test accuracy:', score[1])
 
 
 print(get_confusion_matrix_one_hot(runname,pred, Trutharr))
+fig=plt.figure()
+Trutharr=np.asarray(Trutharr)
+noev=min([len(Trutharr),len(pred)])
+pred=pred[:noev]
+Trutharr=Trutharr[:noev]
+print(pred,Trutharr)
+x1=np.where(Trutharr==0)
+x2=np.where(Trutharr==1)
+p2=[]
+print(pred,np.shape(pred))
+
+for i in np.arange(np.shape(pred)[0]):
+    score=np.argmax(pred[i])
+    if score==0:
+        s2=1-pred[i][0]
+    elif score==1:
+        s2=pred[i][1]
+    p2.append(s2)
+
+
+p2=np.asarray(p2)
+np.save('/home/spencers/predictions/'+runname+'_predictions.npy', p2)
+x1=x1[0]
+x2=x2[0]
+print(x1,x2,p2)
+print(len(x1),len(x2),len(p2),noev)
+print(p2[x1])
+print(p2[x2])
+print(len(x1),len(x2),len(p2[x1]),len(p2[x2]))
+plt.hist(p2[x1],10,label='True Hadron',alpha=0.5,density=False)
+plt.hist(p2[x2],10,label='True Gamma',alpha=0.5,density=False)
+plt.xlabel('isGamma Score')
+plt.ylabel('Frequency')
+plt.legend()
+plt.savefig('/home/spencers/Figures/'+runname+'_hist.png')
+cutval=0.1
+print('No_gamma',len(np.where(p2>=cutval)[0]))
+print('No_bg',len(np.where(p2<cutval)[0]))
