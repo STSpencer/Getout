@@ -72,14 +72,17 @@ for method in hex_methods:
 
 trigsperfile=int(float(notrigs)/float(nofiles))
 
-for runno in np.arange(nofiles):
+for runno in np.arange(nofiles)+1:
     to_hdf={'id':[],'oversampling':[],'rebinning':[],'nearest_interpolation':[],'bilinear_interpolation':[],'bicubic_interpolation':[],'image_shifting':[],'axial_addressing':[]}
     startev=runno*trigsperfile
-    stopev=(runno+1)*trigsperfile
+    if runno==nofiles:
+        stopev=notrigs
+    else:
+        stopev=(runno+1)*trigsperfile
     print('Processing Data: '+str(runno))
     f=ROOT.TFile.Open(datafile,'read')
     mytree=f.Get("dst")
-
+    
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
