@@ -51,12 +51,13 @@ plt.ioff()
 # Finds all the hdf5 files in a given directory
 global onlyfiles
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
-runname = 'vtest1'
+runname = 'vtest1_sim'
 hexmethod='axial_addressing'
 
 global Trutharr
 Trutharr = []
 Train2=[]
+truid=[]
 print(onlyfiles,len(onlyfiles))
 
 # Find true event classes for test data to construct confusion matrix.
@@ -69,8 +70,11 @@ for file in onlyfiles[7:8]:
     for key in inputdata.keys():
         print(key,np.shape(inputdata[key]))
     labelsarr = np.asarray(inputdata['isGamma'][:])
+    idarr = np.asarray(inputdata['id'][:])
     for value in labelsarr:
         Trutharr.append(value)
+    for value in idarr:
+        truid.append(value)
     inputdata.close()
 
 for file in onlyfiles[1:6]:
@@ -86,7 +90,8 @@ for file in onlyfiles[1:6]:
 
 print('lentruth', len(Trutharr))
 print('lentrain',len(Train2))
-
+np.save('/home/spencers/truesim/truthvals_'+runname+'.npy',np.asarray(Trutharr))
+np.save('/home/spencers/idsim/idvals_'+runname+'.npy',np.asarray(truid))
 
 # Define model architecture.
 if hexmethod in ['axial_addressing','image_shifting']:
