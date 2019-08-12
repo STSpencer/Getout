@@ -76,7 +76,7 @@ for runno in np.arange(nofiles)+1:
     to_hdf={'id':[],'oversampling':[],'rebinning':[],'nearest_interpolation':[],'bilinear_interpolation':[],'bicubic_interpolation':[],'image_shifting':[],'axial_addressing':[]}
     startev=runno*trigsperfile
     if runno==nofiles:
-        stopev=notrigs
+        stopev=notrigs-1
     else:
         stopev=(runno+1)*trigsperfile
     print('Processing Data: '+str(runno))
@@ -88,7 +88,10 @@ for runno in np.arange(nofiles)+1:
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
     print(startev,stopev,trigsperfile,runno,evarr)
     for i in np.arange(trigsperfile):
-        to_hdf['id'].append(evarr[i][0])
+        try:
+            to_hdf['id'].append(evarr[i][0])
+        except IndexError:
+            break
         for method in hex_methods:
             image1=extract_im(mappers,i,method,deadarr,imarr,0,cam) #Should set deadarr to None when MC comes through
             image2=extract_im(mappers,i,method,deadarr,imarr,1,cam)
