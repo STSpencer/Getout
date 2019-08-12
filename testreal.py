@@ -72,8 +72,9 @@ for file in realdata:
 
 #noev=100
 noev=len(evlist)
-batchsize=50
-no_steps=int(noev/float(batchsize))
+batchsize=1
+#no_steps=int(noev/float(batchsize))
+no_steps=noev
 print('No Steps:',no_steps)
 
 global Trutharr
@@ -93,12 +94,20 @@ else:
 print('Predicting')
 model=load_model(modfile)
 g2=generate_real_sequences(realdata,batchsize,hexmethod)
-pred = model.predict_generator(1,
-    verbose=0,workers=0,
+pred = model.predict_generator(g2,
+    verbose=1,workers=0,
      use_multiprocessing=False,
                                steps=noev)
-
-np.save('/home/spencers/predictions/'+str(runcode)+'_'+runname+'_predictions_REAL.npy', pred)
+p2=[]
+for i in np.arange(np.shape(pred)[0]):
+    score=np.argmax(pred[i])
+    if score==0:
+        s2=1-pred[i][0]
+    elif score==1:
+        s2=pred[i][1]
+    p2.append(s2)
+p2=np.asarray(p2)
+np.save('/home/spencers/predictions/'+str(runcode)+'_'+runname+'_predictions_REAL.npy', p2)
 
 gen=generate_real_sequences(realdata,batchsize,hexmethod)
 
