@@ -76,7 +76,7 @@ for runno in np.arange(nofiles)+1:
     to_hdf={'id':[],'oversampling':[],'rebinning':[],'nearest_interpolation':[],'bilinear_interpolation':[],'bicubic_interpolation':[],'image_shifting':[],'axial_addressing':[]}
     startev=runno*trigsperfile
     if runno==nofiles:
-        stopev=notrigs-1
+        stopev=notrigs
     else:
         stopev=(runno+1)*trigsperfile
     print('Processing Data: '+str(runno))
