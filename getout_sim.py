@@ -4,24 +4,24 @@ import ROOT
 import numpy as np
 from root_numpy import tree2array
 from ROOT import gSystem, TFile, TTreeReader
-from root_numpy import tree2array,root2array
+from root_numpy import tree2array,root2array,list_trees,list_branches
 import root_numpy
 import matplotlib.pyplot as plt
 from image_mapping import ImageMapper
-import tables
+import h5py
 
 ROOT.ROOT.EnableImplicitMT()
 ROOT.gROOT.SetBatch(True)
 if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
     print("Problem loading EventDisplay libraries - please check this before proceeding")
 
-gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/Testgamma3.dst.root'
-protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/testproton.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
+gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcgammacrab.dst.root'
+protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcprotoncrab.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
 cam = 'VERITAS'
-runcode='Testmixture'
-runname='/lustre/fs19/group/cta/users/sspencer/Processed/'+runcode+'_'
+runcode='Crabrun1'
+runname='/lustre/fs19/group/cta/users/sspencer/Crabrun1/'+runcode+'_'
 nochannels=499
-nofiles=100
+nofiles=200
 
 f=ROOT.TFile.Open(protonfile,'read')
 mytree=f.Get("dst")
@@ -37,10 +37,9 @@ notrigs=min([noprotons,nogammas])
 print('Number of triggers',notrigs)
 
 mappers = {}
-
 hex_methods = ['oversampling', 'rebinning', 'nearest_interpolation',
                'bilinear_interpolation', 'bicubic_interpolation', 
-               'image_shifting', 'axial_addressing']
+               'image_shifting','axial_addressing']
 
 hex_cams=['VERITAS']
 
@@ -69,7 +68,11 @@ def extract_im(mappers,i,method,deadarr,imarr,tel,cam):
         deadlist=np.where(deadvals!=0)[0]
         for k in deadlist:
             imarr=dedead(imarr,tel,k)
-    image=imarr[i][0][tel][:499]
+    try:
+        #print(imarr[i][0][tel][:499])
+        image=imarr[i][0][tel][:499]
+    except IndexError:
+        return None
     image=np.expand_dims(image,1)
     image = mappers[method].map_image(image, cam)
     return image
@@ -86,11 +89,12 @@ for runno in np.arange(nofiles):
     startev=runno*trigsperfile
     stopev=(runno+1)*trigsperfile
     print('Processing Protons')
+
     f=ROOT.TFile.Open(protonfile,'read')
     mytree=f.Get("dst")
-
+    print('Proton DST Retrieved')
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
-    deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
+    #deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
     
     for i in np.arange(trigsperfile):
@@ -99,10 +103,14 @@ for runno in np.arange(nofiles):
         to_hdf['isGamma'].append(0) #0 is proton, 1 is gamma
 
         for method in hex_methods:
-            image1=extract_im(mappers,i,method,deadarr,imarr,0,cam) #Should set deadarr to None when MC comes through
-            image2=extract_im(mappers,i,method,deadarr,imarr,1,cam)
-            image3=extract_im(mappers,i,method,deadarr,imarr,2,cam)
-            image4=extract_im(mappers,i,method,deadarr,imarr,3,cam)
+            image1=extract_im(mappers,i,method,None,imarr,0,cam) #Should set deadarr to None when MC comes through
+            image2=extract_im(mappers,i,method,None,imarr,1,cam)
+            image3=extract_im(mappers,i,method,None,imarr,2,cam)
+            image4=extract_im(mappers,i,method,None,imarr,3,cam)
+            if image1 is None and image2 is None and image3 is None and image4 is None:
+                del to_hdf['id'][-1]
+                del to_hdf['isGamma'][-1]
+                break
             out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
             out_arr[0,:,:,:]=image1
             out_arr[1,:,:,:]=image2
@@ -116,7 +124,7 @@ for runno in np.arange(nofiles):
     f=ROOT.TFile.Open(gammafile,'read')
 
     mytree=f.Get("dst")
-
+    print('Gamma DST Retrieved')
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
 
@@ -130,6 +138,10 @@ for runno in np.arange(nofiles):
             image2=extract_im(mappers,i,method,None,imarr,1,cam)
             image3=extract_im(mappers,i,method,None,imarr,2,cam)
             image4=extract_im(mappers,i,method,None,imarr,3,cam)
+            if image1 is None and image2 is None and image3 is None and image4 is None:
+                del to_hdf['id'][-1]
+                del to_hdf['isGamma'][-1]
+                break
             out_arr=np.zeros((4,np.shape(image1)[0],np.shape(image1)[1],1),dtype='float32')
             out_arr[0,:,:,:]=image1
             out_arr[1,:,:,:]=image2
@@ -141,10 +153,8 @@ for runno in np.arange(nofiles):
 
     randomize = np.arange(len(to_hdf['isGamma'])) #Randomization Code
     np.random.shuffle(randomize)
-
     print('Writing HDF5')
-    h5file = tables.open_file(runname+str(runno)+'_SIM.hdf5', mode="w")
-    root = h5file.root
+    h5file = h5py.File(runname+str(runno)+'_SIM.hdf5',"w")
     
     for keyval in to_hdf.keys():
         if keyval=='id' or keyval=='isGamma':
@@ -152,6 +162,6 @@ for runno in np.arange(nofiles):
         else:
             to_hdf[keyval]=np.asarray(to_hdf[keyval],dtype='float32')
         to_hdf[keyval]=to_hdf[keyval][randomize]
-        h5file.create_array(root,keyval,to_hdf[keyval],keyval)
+        h5file.create_dataset(keyval,data=to_hdf[keyval])
 
     h5file.close()
