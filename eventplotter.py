@@ -3,8 +3,8 @@ import numpy as np
 import h5py
 
 datafile=h5py.File('/store/spencers/Data/smalltest/Crabrun2_191_SIM.hdf5','r')
-plotmode='oversampling
-'
+plotmode='oversampling'
+
 isGam=datafile['isGamma'][:].tolist()
 ids=datafile['id'][:].tolist()
 images=datafile[plotmode][:]

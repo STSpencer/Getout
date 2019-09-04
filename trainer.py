@@ -50,9 +50,9 @@ plt.ioff()
 
 # Finds all the hdf5 files in a given directory
 global onlyfiles
-onlyfiles = sorted(glob.glob('/store/spencers/Data/Processed/*.hdf5'))
-runname = 'vtest1_sim'
-hexmethod='axial_addressing'
+onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
+runname = 'crabrun2b'
+hexmethod='oversampling'
 
 global Trutharr
 Trutharr = []
@@ -61,14 +61,11 @@ truid=[]
 print(onlyfiles,len(onlyfiles))
 
 # Find true event classes for test data to construct confusion matrix.
-for file in onlyfiles[7:8]:
-    print(file)
+for file in onlyfiles[120:160]:
     try:
         inputdata = h5py.File(file, 'r')
     except OSError:
         continue
-    for key in inputdata.keys():
-        print(key,np.shape(inputdata[key]))
     labelsarr = np.asarray(inputdata['isGamma'][:])
     idarr = np.asarray(inputdata['id'][:])
     for value in labelsarr:
@@ -77,8 +74,7 @@ for file in onlyfiles[7:8]:
         truid.append(value)
     inputdata.close()
 
-for file in onlyfiles[1:6]:
-    print(file)
+for file in onlyfiles[:120]:
     try:
         inputdata = h5py.File(file, 'r')
     except OSError:
@@ -90,6 +86,8 @@ for file in onlyfiles[1:6]:
 
 print('lentruth', len(Trutharr))
 print('lentrain',len(Train2))
+lentrain=len(Train2)
+lentruth=len(Trutharr)
 np.save('/home/spencers/truesim/truthvals_'+runname+'.npy',np.asarray(Trutharr))
 np.save('/home/spencers/idsim/idvals_'+runname+'.npy',np.asarray(truid))
 
@@ -103,31 +101,28 @@ else:
     raise KeyboardInterrupt
 
 model = Sequential()
-model.add(ConvLSTM2D(filters=20, kernel_size=(3, 3),
+model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
                      input_shape=inpshape,
-                     padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
-model.add(Dropout(0.5))
+                     padding='same', return_sequences=True,kernel_regularizer=keras.regularizers.l2(),dropout=0.5,recurrent_dropout=0.5))
 model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=20, kernel_size=(3, 3),
-                    padding='same', return_sequences=True,recurrent_regularizer=keras.regularizers.l2()))
-model.add(Dropout(0.5))
-#model.add(BatchNormalization())
-#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     #padding='same', return_sequences=True))
-#model.add(Dropout(0.5))
-#model.add(BatchNormalization())
+model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     padding='same', return_sequences=True,dropout=0.5,recurrent_dropout=0.5,kernel_regularizer=keras.regularizers.l2()))
+model.add(BatchNormalization())
 
-#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     #padding='same', return_sequences=True))
-#model.add(Dropout(0.5))
-#model.add(BatchNormalization())
-
-#model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     #padding='same', return_sequences=True))
-#model.add(Dropout(0.5))
+model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     padding='same', return_sequences=True,dropout=0.5))
+model.add(BatchNormalization())
+'''
+model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     padding='same', return_sequences=True,dropout=0.5))
+model.add(BatchNormalization())
+'''
+model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+                     padding='same', return_sequences=True,dropout=0.5))
 model.add(BatchNormalization())
 model.add(GlobalAveragePooling3D())
+model.add(Dense(50,activation='relu'))
 model.add(Dense(2, activation='sigmoid'))
 opt = keras.optimizers.Adadelta()
 
@@ -137,12 +132,12 @@ model.compile(
     optimizer=opt,
     metrics=['binary_accuracy'])
 
-early_stop = EarlyStopping(
+'''early_stop = EarlyStopping(
     monitor='val_loss',
     min_delta=0,
     patience=10,
     verbose=1,
-    mode='auto')
+    mode='auto')'''
 
 # Code for ensuring no contamination between training and test data.
 print(model.summary())
@@ -157,12 +152,12 @@ history = model.fit_generator(
     generate_training_sequences(onlyfiles,
         50,
                                 'Train',hexmethod),
-    steps_per_epoch=235,
-    epochs=5,
+    steps_per_epoch=lentrain/50,
+    epochs=20,
     verbose=1,
     workers=0,
     use_multiprocessing=False,
-    shuffle=False,validation_data=generate_training_sequences(onlyfiles,50,'Valid',hexmethod),validation_steps=78)
+    shuffle=True,validation_data=generate_training_sequences(onlyfiles,50,'Valid',hexmethod),validation_steps=lentruth/50.0)
 
 # Plot training accuracy/loss.
 fig = plt.figure()
@@ -200,7 +195,7 @@ np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
 
 print('Evaluating')
 
-score = model.evaluate_generator(generate_training_sequences(onlyfiles,50,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=156)
+score = model.evaluate_generator(generate_training_sequences(onlyfiles,50,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=len(Trutharr)/50)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
 
 print('Test loss:', score[0])
@@ -215,7 +210,6 @@ Trutharr=np.asarray(Trutharr)
 noev=min([len(Trutharr),len(pred)])
 pred=pred[:noev]
 Trutharr=Trutharr[:noev]
-print(pred,Trutharr)
 x1=np.where(Trutharr==0)
 x2=np.where(Trutharr==1)
 p2=[]
@@ -234,11 +228,7 @@ p2=np.asarray(p2)
 np.save('/home/spencers/predictions/'+runname+'_predictions.npy', p2)
 x1=x1[0]
 x2=x2[0]
-print(x1,x2,p2)
-print(len(x1),len(x2),len(p2),noev)
-print(p2[x1])
-print(p2[x2])
-print(len(x1),len(x2),len(p2[x1]),len(p2[x2]))
+
 plt.hist(p2[x1],10,label='True Hadron',alpha=0.5,density=False)
 plt.hist(p2[x2],10,label='True Gamma',alpha=0.5,density=False)
 plt.xlabel('isGamma Score')
