@@ -51,7 +51,7 @@ plt.ioff()
 # Finds all the hdf5 files in a given directory
 global onlyfiles
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
-runname = 'crabrun2b'
+runname = 'crabrun2c'
 hexmethod='oversampling'
 
 global Trutharr
@@ -123,7 +123,7 @@ model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
 model.add(BatchNormalization())
 model.add(GlobalAveragePooling3D())
 model.add(Dense(50,activation='relu'))
-model.add(Dense(2, activation='sigmoid'))
+model.add(Dense(2, activation='softmax'))
 opt = keras.optimizers.Adadelta()
 
 # Compile the model
@@ -150,14 +150,14 @@ plot_model(
 # Train the network
 history = model.fit_generator(
     generate_training_sequences(onlyfiles,
-        50,
+        20,
                                 'Train',hexmethod),
-    steps_per_epoch=lentrain/50,
+    steps_per_epoch=lentrain/20.0,
     epochs=20,
     verbose=1,
     workers=0,
     use_multiprocessing=False,
-    shuffle=True,validation_data=generate_training_sequences(onlyfiles,50,'Valid',hexmethod),validation_steps=lentruth/50.0)
+    shuffle=True,validation_data=generate_training_sequences(onlyfiles,20,'Valid',hexmethod),validation_steps=lentruth/20.0)
 
 # Plot training accuracy/loss.
 fig = plt.figure()
