@@ -16,6 +16,7 @@ import tempfile
 import sys
 from keras.utils import HDF5Matrix
 from keras.models import Sequential
+from keras.regularizers import l2
 from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout, Conv2D, ConvLSTM2D, MaxPooling2D, BatchNormalization, Conv3D, GlobalAveragePooling3D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import AveragePooling2D
@@ -43,16 +44,23 @@ from matplotlib.pyplot import cm
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
 from keras.metrics import binary_accuracy
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 from net_utils import *
 from keras import activations, initializers
 from keras import callbacks, optimizers
+import tqdm
+import random
+import time
+import pandas as pd
+from keras.utils import np_utils # utilities for one-hot encoding of ground truth values
+from keras.regularizers import l2
+import sklearn
 
+K.clear_session()
 plt.ioff()
 
 # Finds all the hdf5 files in a given directory
 global onlyfiles
-noise = 1.0
 
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
 runname = 'crabrun2bayes'
@@ -63,74 +71,6 @@ Trutharr = []
 Train2=[]
 truid=[]
 print(onlyfiles,len(onlyfiles))
-
-def neg_log_likelihood(y_obs, y_pred, sigma=noise):
-    dist = tf.distributions.Normal(loc=y_pred, scale=sigma)
-    return K.sum(-dist.log_prob(y_obs))
-
-def mixture_prior_params(sigma_1, sigma_2, pi, return_sigma=False):
-    params = K.variable([sigma_1, sigma_2, pi], name='mixture_prior_params')
-    sigma = np.sqrt(pi * sigma_1 ** 2 + (1 - pi) * sigma_2 ** 2)
-    return params, sigma
-
-def log_mixture_prior_prob(w):
-    comp_1_dist = tf.distributions.Normal(0.0, prior_params[0])
-    comp_2_dist = tf.distributions.Normal(0.0, prior_params[1])
-    comp_1_weight = prior_params[2]    
-    return K.log(comp_1_weight * comp_1_dist.prob(w) + (1 - comp_1_weight) * comp_2_dist.prob(w))    
-
-# Mixture prior parameters shared across DenseVariational layer instances
-prior_params, prior_sigma = mixture_prior_params(sigma_1=1.0, sigma_2=0.1, pi=0.2)
-
-class DenseVariational(Layer):
-    def __init__(self, output_dim, kl_loss_weight, activation=None, **kwargs):
-        self.output_dim = output_dim
-        self.kl_loss_weight = kl_loss_weight
-        self.activation = activations.get(activation)
-        super().__init__(**kwargs)
-
-    def build(self, input_shape):  
-        self._trainable_weights.append(prior_params) 
-
-        self.kernel_mu = self.add_weight(name='kernel_mu', 
-                                         shape=(input_shape[1], self.output_dim),
-                                         initializer=initializers.normal(stddev=prior_sigma),
-                                         trainable=True)
-        self.bias_mu = self.add_weight(name='bias_mu', 
-                                       shape=(self.output_dim,),
-                                       initializer=initializers.normal(stddev=prior_sigma),
-                                       trainable=True)
-        self.kernel_rho = self.add_weight(name='kernel_rho', 
-                                          shape=(input_shape[1], self.output_dim),
-                                          initializer=initializers.constant(0.0),
-                                          trainable=True)
-        self.bias_rho = self.add_weight(name='bias_rho', 
-                                        shape=(self.output_dim,),
-                                        initializer=initializers.constant(0.0),
-                                        trainable=True)
-        super().build(input_shape)
-
-    def call(self, x):
-        kernel_sigma = tf.nn.softplus(self.kernel_rho)
-        kernel = self.kernel_mu + kernel_sigma * tf.random_normal(self.kernel_mu.shape)
-
-        bias_sigma = tf.nn.softplus(self.bias_rho)
-        bias = self.bias_mu + bias_sigma * tf.random_normal(self.bias_mu.shape)
-                
-        self.add_loss(self.kl_loss(kernel, self.kernel_mu, kernel_sigma) + 
-                      self.kl_loss(bias, self.bias_mu, bias_sigma))
-        
-        return self.activation(K.dot(x, kernel) + bias)
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
-    
-    def kl_loss(self, w, mu, sigma):
-        variational_dist = tf.distributions.Normal(mu, sigma)
-        return kl_loss_weight * K.sum(variational_dist.log_prob(w) - log_mixture_prior_prob(w))
-
-
-
 
 # Find true event classes for test data to construct confusion matrix.
 for file in onlyfiles[120:160]:
@@ -160,8 +100,11 @@ print('lentruth', len(Trutharr))
 print('lentrain',len(Train2))
 lentrain=len(Train2)
 lentruth=len(Trutharr)
-kl_loss_weight = 1.0 / (len(Train2)/10.0)
 
+dropout = 0.5
+tau = 0.5  # obtained from BO
+lengthscale = 1e-2
+reg = lengthscale ** 2 * (1 - dropout) / (2. * lentrain * tau)
 
 np.save('/home/spencers/truesim/truthvals_'+runname+'.npy',np.asarray(Trutharr))
 np.save('/home/spencers/idsim/idvals_'+runname+'.npy',np.asarray(truid))
@@ -186,18 +129,17 @@ model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
 model.add(BatchNormalization())
 
 model.add(GlobalAveragePooling3D())
-model.add(Dense(20,activation='relu'))
-model.add(DenseVariational(20,kl_loss_weight=kl_loss_weight,activation='relu'))
-model.add(DenseVariational(20,kl_loss_weight=kl_loss_weight,activation='relu'))
-model.add(DenseVariational(2,kl_loss_weight=kl_loss_weight,activation='softmax'))
+model.add(Dense(20, activation='relu', kernel_regularizer= l2(reg)))
+model.add(Dropout(0.5))
+model.add(Dense(2,activation='softmax'))
 
-opt = keras.optimizers.Adam(lr=0.03)
-
+opt = keras.optimizers.Adam()
+#opt=keras.optimizers.Adadelta()
 # Compile the model
 model.compile(
-    loss=neg_log_likelihood,
+    loss='binary_crossentropy',
     optimizer=opt,
-    metrics=['mse'])
+    metrics=['binary_accuracy'])
 
 '''early_stop = EarlyStopping(
     monitor='val_loss',
@@ -213,19 +155,20 @@ plot_model(
     model,
     to_file='/home/spencers/Figures/'+runname+'_model.png',
     show_shapes=True)
-
 # Train the network
+#steps_per_epoch=lentrain/10.0,
+#validation_steps=lentruth/10.0
 history = model.fit_generator(
     generate_training_sequences(onlyfiles,
         10,
                                 'Train',hexmethod),
-    steps_per_epoch=lentrain/10.0,
-    epochs=1,
+    epochs=3,
     verbose=1,
     workers=0,
-    use_multiprocessing=False,
-    shuffle=True,validation_data=generate_training_sequences(onlyfiles,10,'Valid',hexmethod),validation_steps=lentruth/10.0)
-'''
+    use_multiprocessing=False,steps_per_epoch=10,
+    shuffle=True,validation_data=generate_training_sequences(onlyfiles,10,'Valid',hexmethod),validation_steps=10
+)
+
 # Plot training accuracy/loss.
 fig = plt.figure()
 plt.subplot(2, 1, 1)
@@ -248,74 +191,67 @@ plt.legend(loc='upper right')
 plt.tight_layout()
 
 plt.savefig('/home/spencers/Figures/'+runname+'trainlog.png')
-'''
+
+
 # Test the network
 print('Predicting')
-pred = model.predict_generator(
-    generate_training_sequences(onlyfiles,
-        1,
-        'Test',hexmethod),
-    verbose=0,workers=0,
-     use_multiprocessing=False,
-    steps=len(Trutharr))
-np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
-print(pred[:100],np.shape(pred))
-y_preds=np.concatenate(pred,axis=1)
-y_mean=np.mean(y_preds,axis=1)
-y_sigma=np.std(y_preds,axis=1)
-X_test=np.linspace(0,1,len(pred)).reshape(-1,1)
 
-plt.plot(X_test, y_mean, 'r-', label='Predictive mean');
-plt.fill_between(X_test.ravel(), 
-                 y_mean + 2 * y_sigma, 
-                 y_mean - 2 * y_sigma, 
-                 alpha=0.5, label='Epistemic uncertainty')
-plt.title('Prediction')
-plt.savefig('bayes1.png')
+#steps=len(Trutharr)
 
-'''print('Evaluating')
+predict_stochastic = K.function([model.layers[0].input, K.learning_phase()], [model.layers[-1].output])
 
-score = model.evaluate_generator(generate_training_sequences(onlyfiles,10,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=len(Trutharr)/10.0)
+Yt_hat=[]
+for i in tqdm.tqdm(range(10)): #No posterior samples
+    dat=generate_training_sequences(onlyfiles,1,'Test',hexmethod)
+    p0=[]
+    for j in range(100): #No predict images
+        p1=predict_stochastic([next(dat)[0],1])
+        p0.append(p1)
+    #p0=np.asarray(p0)
+    Yt_hat.append(p0)
+
+Yt_hat=np.asarray(Yt_hat)
+print('yth',np.shape(Yt_hat))
+np.save('bayespred',Yt_hat)
+
+print('Evaluating')
+#steps=len(Trutharr)/10.0
+score = model.evaluate_generator(generate_training_sequences(onlyfiles,10,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=10)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
 
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
-# Plot confusion matrix
 
+stoch_preds = pd.DataFrame()
+print(np.shape(Yt_hat))
+print("Calculating means etc...")
+X_test=Trutharr[:100]
+for i in range(len(X_test)):
+    stoch_preds.set_value(index = i, col= 0, value = Yt_hat[:, 0, i, 0].mean())
+    stoch_preds.set_value(index=i, col=1, value=Yt_hat[:, 0, i, 1].mean())
 
-print(get_confusion_matrix_one_hot(runname,pred, Trutharr))
-fig=plt.figure()
-Trutharr=np.asarray(Trutharr)
-noev=min([len(Trutharr),len(pred)])
-pred=pred[:noev]
-Trutharr=Trutharr[:noev]
-x1=np.where(Trutharr==0)
-x2=np.where(Trutharr==1)
-p2=[]
-print(pred,np.shape(pred))
+print(stoch_preds.to_string())
+bayesian_predictions = stoch_preds.apply(lambda x: np.argmax(x), axis = 1)
+print(bayesian_predictions.to_string())
+raise KeyboardInterrupt
+y_true = pd.Series([int(x)  for x in y_test])
 
-for i in np.arange(np.shape(pred)[0]):
-    score=np.argmax(pred[i])
-    if score==0:
-        s2=1-pred[i][0]
-    elif score==1:
-        s2=pred[i][1]
-    p2.append(s2)
+confuse_mat_bayesian = pd.crosstab(y_true, bayesian_predictions)
 
+print("Bayesian confusion matrix: \n {}".format(confuse_mat_bayesian))
 
-p2=np.asarray(p2)
-np.save('/home/spencers/predictions/'+runname+'_predictions.npy', p2)
-x1=x1[0]
-x2=x2[0]
+def accuracy(confusion_matrix):
+    acc = sum(np.diag(confusion_matrix))/sum(np.array(confusion_matrix)).sum()
+    return acc
 
-plt.hist(p2[x1],10,label='True Hadron',alpha=0.5,density=False)
-plt.hist(p2[x2],10,label='True Gamma',alpha=0.5,density=False)
-plt.xlabel('isGamma Score')
-plt.ylabel('Frequency')
-plt.legend()
-plt.savefig('/home/spencers/Figures/'+runname+'_hist.png')
-cutval=0.1
-print('No_gamma',len(np.where(p2>=cutval)[0]))
-print('No_bg',len(np.where(p2<cutval)[0]))
-'''
+print("Bayesian accuracy: {}".format(accuracy(confuse_mat_bayesian)))
+
+one_true = [1 if x == 1 else 0 for x in y_test]
+
+print("Calculating precision/recall")
+
+precision1_stoch, recall1_stoch, _ = precision_recall_curve(one_true, preds_df['mean_pred_1'],  pos_label=1)
+
+average_precision1_stoch = average_precision_score(one_true, preds_df['mean_pred_1'])
+print("Average Bayesian precision on Class 1: {}".format(average_precision1_stoch))
