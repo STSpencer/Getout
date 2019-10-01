@@ -207,10 +207,12 @@ for i in tqdm.tqdm(range(10)): #No posterior samples
     for j in range(100): #No predict images
         p1=predict_stochastic([next(dat)[0],1])
         p0.append(p1)
+
     #p0=np.asarray(p0)
     Yt_hat.append(p0)
 
 Yt_hat=np.asarray(Yt_hat)
+Yt_hat=np.squeeze(Yt_hat)
 print('yth',np.shape(Yt_hat))
 np.save('bayespred',Yt_hat)
 
@@ -225,16 +227,30 @@ print('Test accuracy:', score[1])
 
 stoch_preds = pd.DataFrame()
 print(np.shape(Yt_hat))
+#print(Yt_hat)
 print("Calculating means etc...")
 X_test=Trutharr[:100]
-for i in range(len(X_test)):
-    stoch_preds.set_value(index = i, col= 0, value = Yt_hat[:, 0, i, 0].mean())
-    stoch_preds.set_value(index=i, col=1, value=Yt_hat[:, 0, i, 1].mean())
+y_test=Trutharr[:100]
 
+for i in range(len(X_test)):
+    stoch_preds.set_value(index = i, col= 0, value = Yt_hat[:,i,0].mean())
+    stoch_preds.set_value(index=i, col=1, value=Yt_hat[:, i, 1].mean())
+    stoch_preds.set_value(index=i, col=2 ,value=Yt_hat[:,i,0].std())
+
+stoch_preds=stoch_preds.rename(columns={0:'x',1:'y',2:'std'})
+print(stoch_preds.to_string())
+def scoremaker(x):
+    if np.argmax(x)==0:
+        return 1-x[0]
+    else:
+        return x[1] 
 print(stoch_preds.to_string())
 bayesian_predictions = stoch_preds.apply(lambda x: np.argmax(x), axis = 1)
-print(bayesian_predictions.to_string())
-raise KeyboardInterrupt
+bayesian_score = stoch_preds.apply(lambda x: scoremaker(x), axis=1)
+bayesian_score = bayesian_score.to_numpy()
+print(bayesian_predictions)
+print(bayesian_score,stoch_preds['std'].to_numpy())
+
 y_true = pd.Series([int(x)  for x in y_test])
 
 confuse_mat_bayesian = pd.crosstab(y_true, bayesian_predictions)
@@ -251,7 +267,7 @@ one_true = [1 if x == 1 else 0 for x in y_test]
 
 print("Calculating precision/recall")
 
-precision1_stoch, recall1_stoch, _ = precision_recall_curve(one_true, preds_df['mean_pred_1'],  pos_label=1)
+precision1_stoch, recall1_stoch, _ = precision_recall_curve(one_true, bayesian_score,  pos_label=1)
 
-average_precision1_stoch = average_precision_score(one_true, preds_df['mean_pred_1'])
+average_precision1_stoch = average_precision_score(one_true, bayesian_score)
 print("Average Bayesian precision on Class 1: {}".format(average_precision1_stoch))
