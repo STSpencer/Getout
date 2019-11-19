@@ -108,7 +108,7 @@ def hardcode_valid():
     global train2
     global test2
     if batchflag == 'Train':
-        filelist = onlyfiles[:120]
+        filelist = onlyfiles[:10]
         for file in filelist:
             try:
                 inputdata = h5py.File(file, 'r')
@@ -119,7 +119,7 @@ def hardcode_valid():
             inputdata.close()
 
     elif batchflag == 'Test':
-        filelist = onlyfiles[120:160]
+        filelist = onlyfiles[20:30]
         global testevents
         global test2
         for file in filelist:
@@ -132,7 +132,7 @@ def hardcode_valid():
             inputdata.close()
 
     elif batchflag == 'Valid':
-        filelist = onlyfiles[160:]
+        filelist = onlyfiles[10:20]
         global validevents
         global valid2
         for file in filelist:
@@ -214,7 +214,7 @@ def hardcode_train():
     global train2
     global test2
     if batchflag == 'Train':
-        filelist = onlyfiles[:120]
+        filelist = onlyfiles[:10]
         for file in filelist:
             try:
                 inputdata = h5py.File(file, 'r')
@@ -225,7 +225,7 @@ def hardcode_train():
             inputdata.close()
 
     elif batchflag == 'Test':
-        filelist = onlyfiles[120:160]
+        filelist = onlyfiles[20:30]
         global testevents
         global test2
         for file in filelist:
@@ -238,7 +238,7 @@ def hardcode_train():
             inputdata.close()
 
     elif batchflag == 'Valid':
-        filelist = onlyfiles[160:]
+        filelist = onlyfiles[20:30]
         global validevents
         global valid2
         for file in filelist:

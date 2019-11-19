@@ -50,7 +50,7 @@ plt.ioff()
 # Finds all the hdf5 files in a given directory
 global onlyfiles
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
-runname = 'hyperas1'
+runname = 'hyperas2'
 hexmethod='oversampling'
 
 global Trutharr
@@ -60,7 +60,7 @@ truid=[]
 print(onlyfiles,len(onlyfiles))
 
 # Find true event classes for test data to construct confusion matrix.
-for file in onlyfiles[120:160]:
+for file in onlyfiles[20:30]:
     try:
         inputdata = h5py.File(file, 'r')
     except OSError:
@@ -73,7 +73,7 @@ for file in onlyfiles[120:160]:
         truid.append(value)
     inputdata.close()
 
-for file in onlyfiles[:120]:
+for file in onlyfiles[:10]:
     try:
         inputdata = h5py.File(file, 'r')
     except OSError:
@@ -110,32 +110,32 @@ def create_model(train_generator,validation_generator):
     inpshape=(None,54,54,1)
 
     model = Sequential()
-    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size=(3, 3),
+    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size={{choice([(2,2),(3, 3),(4,4),(5,5)])}},
                          input_shape=inpshape,
-                         padding='same', return_sequences=True,kernel_regularizer=keras.regularizers.l2(),dropout={{uniform(0,1)}},recurrent_dropout={{uniform(0,1)}}))
+                         padding='same', return_sequences=True,kernel_regularizer=keras.regularizers.l2({{uniform(0,1)}}),dropout={{uniform(0,1)}},recurrent_dropout={{uniform(0,1)}}))
     model.add(BatchNormalization())
     
-    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size=(3, 3),
-                         padding='same', return_sequences=True,dropout={{uniform(0,1)}},recurrent_dropout={{uniform(0,1)}},kernel_regularizer=keras.regularizers.l2()))
+    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size={{choice([(2,2),(3, 3),(4,4),(5,5)])}},
+                         padding='same', return_sequences=True,dropout={{uniform(0,1)}},recurrent_dropout={{uniform(0,1)}},kernel_regularizer=keras.regularizers.l2({{uniform(0,1)}})))
     model.add(BatchNormalization())
     
-    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size=(3, 3),
+    model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size={{choice([(2,2),(3, 3),(4,4),(5,5)])}},
                          padding='same', return_sequences=True,dropout={{uniform(0,1)}}))
     model.add(BatchNormalization())
     if {{choice(['three','four'])}}=='four':
-        model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size=(3, 3),
+        model.add(ConvLSTM2D(filters={{choice([10,20,30,40])}}, kernel_size={{choice([(2,2),(3, 3),(4,4),(5,5)])}},
     padding='same', return_sequences=True,dropout={{uniform(0,1)}}))
         model.add(BatchNormalization())
 
     model.add(BatchNormalization())
     model.add(GlobalAveragePooling3D())
-    model.add(Dense(50,activation='relu'))
+    model.add(Dense({{choice([10,50,100,200])}},activation='relu'))
     model.add(Dense(2, activation='softmax'))
 
     # Compile the model
     model.compile(
         loss='binary_crossentropy',
-        optimizer={{choice(['Adadelta','SGD','Adam'])}},
+        optimizer='Adam',
         metrics=['binary_accuracy'])
     
     '''early_stop = EarlyStopping(
@@ -146,25 +146,25 @@ def create_model(train_generator,validation_generator):
     mode='auto')'''
     
     # Code for ensuring no contamination between training and test data.
-    lentrain=78400
-    lentruth=235174
+    lentrain=19574
+    lentruth=19600
 # Train the network
     history = model.fit_generator(
         train_generator,
-        steps_per_epoch=lentrain/2000.0,
-        epochs=4,
+        steps_per_epoch=lentrain/20.0,
+        epochs=1,
         verbose=2,
         workers=0,
         use_multiprocessing=False,
-        shuffle=True,validation_data=validation_generator,validation_steps=lentruth/2000.0)
-    score, acc=model.evaluate_generator(validation_generator,steps=lentruth/2000.0)
+        shuffle=True,validation_data=validation_generator,validation_steps=lentruth/20.0)
+    score, acc=model.evaluate_generator(validation_generator,steps=lentruth/20.0)
     return{'loss':-acc,'status': STATUS_OK, 'model':model}
 
     # Plot training accuracy/loss.
 
 train_generator,validation_generator=data(onlyfiles,hexmethod)
 
-run,model=optim.minimize(model=create_model,data=data,algo=tpe.suggest,max_evals=5,trials=Trials())
+run,model=optim.minimize(model=create_model,data=data,algo=tpe.suggest,max_evals=300,trials=Trials())
 print('best run:', run)
 
 plt.tight_layout()
