@@ -51,7 +51,7 @@ plt.ioff()
 # Finds all the hdf5 files in a given directory
 global onlyfiles
 onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
-runname = 'crabrun2c'
+runname = 'crabrun2opt4'
 hexmethod='oversampling'
 
 global Trutharr
@@ -101,30 +101,25 @@ else:
     raise KeyboardInterrupt
 
 model = Sequential()
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
+model.add(ConvLSTM2D(filters=10, kernel_size=(4, 4),
                      input_shape=inpshape,
-                     padding='same', return_sequences=True,kernel_regularizer=keras.regularizers.l2(),dropout=0.5,recurrent_dropout=0.5))
+                     padding='same', return_sequences=True,kernel_regularizer=keras.regularizers.l2(0.0797),dropout=0.0361,recurrent_dropout=0.382))
 model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True,dropout=0.5,recurrent_dropout=0.5,kernel_regularizer=keras.regularizers.l2()))
+model.add(ConvLSTM2D(filters=10, kernel_size=(2, 2),
+                     padding='same', return_sequences=True,dropout=0.371,recurrent_dropout=0.510,kernel_regularizer=keras.regularizers.l2(0.576)))
 model.add(BatchNormalization())
 
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True,dropout=0.5))
+model.add(ConvLSTM2D(filters=40, kernel_size=(2, 2),
+                     padding='same', return_sequences=True,dropout=0.0))
 model.add(BatchNormalization())
-'''
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True,dropout=0.5))
-model.add(BatchNormalization())
-'''
-model.add(ConvLSTM2D(filters=30, kernel_size=(3, 3),
-                     padding='same', return_sequences=True,dropout=0.5))
+model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5),
+                     padding='same', return_sequences=True,dropout=0.5056))
 model.add(BatchNormalization())
 model.add(GlobalAveragePooling3D())
-model.add(Dense(50,activation='relu'))
+model.add(Dense(100,activation='relu'))
 model.add(Dense(2, activation='softmax'))
-opt = keras.optimizers.Adadelta()
+opt = keras.optimizers.Adam(lr=1e-5)
 
 # Compile the model
 model.compile(
@@ -153,8 +148,8 @@ history = model.fit_generator(
         20,
                                 'Train',hexmethod),
     steps_per_epoch=lentrain/20.0,
-    epochs=20,
-    verbose=1,
+    epochs=50,
+    verbose=2,
     workers=0,
     use_multiprocessing=False,
     shuffle=True,validation_data=generate_training_sequences(onlyfiles,20,'Valid',hexmethod),validation_steps=lentruth/20.0)
@@ -195,7 +190,7 @@ np.save('/home/spencers/predictions/'+runname+'_predictions.npy', pred)
 
 print('Evaluating')
 
-score = model.evaluate_generator(generate_training_sequences(onlyfiles,50,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=len(Trutharr)/50)
+score = model.evaluate_generator(generate_training_sequences(onlyfiles,20,'Test',hexmethod),workers=0,use_multiprocessing=False,steps=len(Trutharr)/20.0)
 model.save('/home/spencers/Models/'+runname+'model.hdf5')
 
 print('Test loss:', score[0])

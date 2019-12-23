@@ -54,10 +54,10 @@ global realdata
 
 eventnumbers=[]
 realdata = sorted(glob.glob('/store/spencers/Data/Real/*.hdf5'))
-runname = 'crabrun2b'
+runname = 'crabrun2opt4'
 runcode = 64080
 hexmethod='oversampling'
-modfile='/home/spencers/Models/crabrun2bmodel.hdf5' #Model file to use
+modfile='/home/spencers/Models/crabrun2opt4model.hdf5' #Model file to use
 evlist=[]
 
 for file in realdata:

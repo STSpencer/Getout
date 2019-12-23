@@ -164,7 +164,7 @@ def create_model(train_generator,validation_generator):
 
 train_generator,validation_generator=data(onlyfiles,hexmethod)
 
-run,model=optim.minimize(model=create_model,data=data,algo=tpe.suggest,max_evals=300,trials=Trials())
+run,model=optim.minimize(model=create_model,data=data,algo=tpe.suggest,max_evals=200,trials=Trials())
 print('best run:', run)
 
 plt.tight_layout()
