@@ -1,0 +1,17 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import h5py
+
+datafile=h5py.File('/store/spencers/Data/smalltest/Crabrun2_191_SIM.hdf5','r')
+plotmode='axial_addressing'
+isGam=datafile['isGamma'].tolist()
+ids=datafile['id'].tolist()
+images=datafile[plotmode]
+print(np.shape(images))
+datafile.close()
+raise KeyboardInterrupt
+fig,axs=plt.subplots(2,2)
+
+for i in np.arange(len(isGam)):
+    plt.suptitle('Event: '+str(ids[i])+' IsGamma: '+str(isGam[i]))
+    

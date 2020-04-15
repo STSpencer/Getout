@@ -1,0 +1,29 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from skimage.restoration import denoise_wavelet
+import h5py
+import glob
+
+onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
+
+hdffile=onlyfiles[0]
+
+inputdata=h5py.File(hdffile,'r')
+trainarr = np.asarray(inputdata[hexmethod][:, :, :, :])
+
+for x in np.arange(np.shape(trainarr)[0]):
+    chargevals = []
+    for y in np.arange(4):
+        chargevals.append(np.sum(trainarr[x,y,:,:]))
+    chargevals = np.argsort(chargevals)
+    chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
+    trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
+    for y in np.arange(4):
+        im1=trainarr[x,y,:,:]
+        im2=denoise_wavelet(trainarr[x,y,:,:])
+        plt.subplot(121)
+        plt.imshow(im1)
+        plt.subplot(122)
+        plt.imshow(im2)
+        plt.show()
+inputdata.close()

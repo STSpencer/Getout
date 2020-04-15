@@ -30,7 +30,8 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from scipy import interp
 from itertools import cycle
-
+from skimage.restoration import denoise_wavelet, denoise_bilateral
+import glob
 global trainevents
 trainevents = []
 global validevents
@@ -65,7 +66,6 @@ def get_confusion_matrix_one_hot(runname,model_results, truth):
     truth=np.asarray(truth)[:noev]
     mr2=mr2[:noev]
     mr3=mr3[:noev]
-    print(mr[:10],mr2[:10],mr3[:10],truth[:10])
 
     cm=confusion_matrix(y_target=truth,y_predicted=np.rint(np.squeeze(model_results)),binary=True)
     fig,ax=plot_confusion_matrix(conf_mat=cm,figsize=(5,5))
@@ -76,20 +76,235 @@ def get_confusion_matrix_one_hot(runname,model_results, truth):
     plt.figure()
     lw = 2
     aucval=auc(fpr,tpr)
+    fpr=np.asarray(fpr)
+    tpr=np.asarray(tpr)
     print(aucval)
+    fpr=1.0-fpr
     plt.plot(fpr, tpr, color='darkorange',
              lw=lw, label='ROC curve (area = %0.2f)' % aucval)
-    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    #plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
+    plt.xlabel('Signal Efficiency')
+    plt.ylabel('Background Rejection')
     #plt.legend(loc="lower right")
-    plt.savefig('/home/spencers/Figures/'+runname+'_roc.png')
-    np.save('/home/spencers/confmatdata/'+runname+'_fp.npy',fpr)
-    np.save('/home/spencers/confmatdata/'+runname+'_tp.npy',tpr)
+    plt.savefig('/home/spencers/Figures/'+runname+'_sigeff.png')
+    np.save('/home/spencers/confmatdata/'+runname+'_sigef.npy',fpr)
+    np.save('/home/spencers/confmatdata/'+runname+'_bgrej.npy',tpr)
     return cm
-        
+
+def hardcode_valid():
+    batchflag='Valid'
+    hexmethod='oversampling'
+    onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
+    batch_size=20
+    """ Generates training/test sequences on demand
+    """
+
+    nofiles = 0
+    i = 0  # No. events loaded in total
+    global trainevents
+    global testevents
+    global train2
+    global test2
+    if batchflag == 'Train':
+        filelist = onlyfiles[:10]
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            trainevents = trainevents + inputdata['isGamma'][:].tolist()
+            train2 = train2 + inputdata['id'][:].tolist()
+            inputdata.close()
+
+    elif batchflag == 'Test':
+        filelist = onlyfiles[20:30]
+        global testevents
+        global test2
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            testevents = testevents + inputdata['isGamma'][:].tolist()
+            test2 = test2 + inputdata['id'][:].tolist()
+            inputdata.close()
+
+    elif batchflag == 'Valid':
+        filelist = onlyfiles[10:20]
+        global validevents
+        global valid2
+        for file in filelist:
+            inputdata = h5py.File(file, 'r')
+            validevents = validevents + inputdata['isGamma'][:].tolist()
+            valid2 = valid2 + inputdata['id'][:].tolist()
+            inputdata.close()
+    else:
+        print('Error: Invalid batchflag')
+        raise KeyboardInterrupt
+    
+    while True:
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            trainarr = np.asarray(inputdata[hexmethod][:, :, :, :])
+            labelsarr = np.asarray(inputdata['isGamma'][:])
+            idarr = np.asarray(inputdata['id'][:])
+            nofiles = nofiles + 1
+            inputdata.close()
+            notrigs=np.shape(trainarr)[0]
+            
+            for x in np.arange(np.shape(trainarr)[0]):
+                chargevals = []
+                for y in np.arange(4):
+                    chargevals.append(np.sum(trainarr[x,y,:,:]))
+
+                chargevals = np.argsort(chargevals)
+                chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
+                trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
+                #Denoising
+                for y in np.arange(4):
+                    im1=trainarr[x,y,:,:]
+                    im1=im1[:,:,0]
+                    im1=im1+abs(np.min(im1))
+                    im2=denoise_bilateral(im1,multichannel=False)
+                    im2=np.expand_dims(im2,axis=2)
+                    trainarr[x,y,:,:]=im2
+                    
+            training_sample_count = len(trainarr)
+            batches = int(training_sample_count / batch_size)
+            remainder_samples = training_sample_count % batch_size
+            i = i + 1000
+            countarr = np.arange(0, len(labelsarr))
+
+#            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
+            if remainder_samples:
+                batches = batches + 1
+
+            # generate batches of samples
+            for idx in list(range(0, batches)):
+                if idx == batches - 1:
+                    batch_idxs = countarr[idx * batch_size:]
+                else:
+                    batch_idxs = countarr[idx *
+                                          batch_size:idx *
+                                          batch_size +
+                                          batch_size]
+                X = trainarr[batch_idxs]
+                X = np.nan_to_num(X)
+                Y = keras.utils.to_categorical(
+                    labelsarr[batch_idxs], num_classes=2)
+                yield (np.array(X), np.array(Y))
+
+def hardcode_train():
+    batchflag='Train'
+    hexmethod='oversampling'
+    onlyfiles = sorted(glob.glob('/store/spencers/Data/Crabrun2/*.hdf5'))
+    batch_size=20
+    """ Generates training/test sequences on demand
+    """
+
+    nofiles = 0
+    i = 0  # No. events loaded in total
+    global trainevents
+    global testevents
+    global train2
+    global test2
+    if batchflag == 'Train':
+        filelist = onlyfiles[:10]
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            trainevents = trainevents + inputdata['isGamma'][:].tolist()
+            train2 = train2 + inputdata['id'][:].tolist()
+            inputdata.close()
+
+    elif batchflag == 'Test':
+        filelist = onlyfiles[20:30]
+        global testevents
+        global test2
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            testevents = testevents + inputdata['isGamma'][:].tolist()
+            test2 = test2 + inputdata['id'][:].tolist()
+            inputdata.close()
+
+    elif batchflag == 'Valid':
+        filelist = onlyfiles[20:30]
+        global validevents
+        global valid2
+        for file in filelist:
+            inputdata = h5py.File(file, 'r')
+            validevents = validevents + inputdata['isGamma'][:].tolist()
+            valid2 = valid2 + inputdata['id'][:].tolist()
+            inputdata.close()
+    else:
+        print('Error: Invalid batchflag')
+        raise KeyboardInterrupt
+    
+    while True:
+        for file in filelist:
+            try:
+                inputdata = h5py.File(file, 'r')
+            except OSError:
+                continue
+            trainarr = np.asarray(inputdata[hexmethod][:, :, :, :])
+            labelsarr = np.asarray(inputdata['isGamma'][:])
+            idarr = np.asarray(inputdata['id'][:])
+            nofiles = nofiles + 1
+            inputdata.close()
+            notrigs=np.shape(trainarr)[0]
+            
+            for x in np.arange(np.shape(trainarr)[0]):
+                chargevals = []
+                for y in np.arange(4):
+                    chargevals.append(np.sum(trainarr[x,y,:,:]))
+
+                chargevals = np.argsort(chargevals)
+                chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
+                trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
+                #Denoising
+                for y in np.arange(4):
+                    im1=trainarr[x,y,:,:]
+                    im1=im1[:,:,0]
+                    im1=im1+abs(np.min(im1))
+                    im2=denoise_bilateral(im1,multichannel=False)
+                    im2=np.expand_dims(im2,axis=2)
+                    trainarr[x,y,:,:]=im2
+                    
+            training_sample_count = len(trainarr)
+            batches = int(training_sample_count / batch_size)
+            remainder_samples = training_sample_count % batch_size
+            i = i + 1000
+            countarr = np.arange(0, len(labelsarr))
+
+#            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
+            if remainder_samples:
+                batches = batches + 1
+
+            # generate batches of samples
+            for idx in list(range(0, batches)):
+                if idx == batches - 1:
+                    batch_idxs = countarr[idx * batch_size:]
+                else:
+                    batch_idxs = countarr[idx *
+                                          batch_size:idx *
+                                          batch_size +
+                                          batch_size]
+                X = trainarr[batch_idxs]
+                X = np.nan_to_num(X)
+                Y = keras.utils.to_categorical(
+                    labelsarr[batch_idxs], num_classes=2)
+                yield (np.array(X), np.array(Y))
+
 def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
     """ Generates training/test sequences on demand
     """
@@ -101,7 +316,7 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
     global train2
     global test2
     if batchflag == 'Train':
-        filelist = onlyfiles[1:6]
+        filelist = onlyfiles[:120]
         print('train', filelist)
         for file in filelist:
             try:
@@ -113,7 +328,7 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
             inputdata.close()
 
     elif batchflag == 'Test':
-        filelist = onlyfiles[7:8]
+        filelist = onlyfiles[120:160]
         print('test', filelist)
         global testevents
         global test2
@@ -127,7 +342,7 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
             inputdata.close()
 
     elif batchflag == 'Valid':
-        filelist = [onlyfiles[9]]
+        filelist = onlyfiles[160:]
         print('valid', filelist)
         global validevents
         global valid2
@@ -161,14 +376,22 @@ def generate_training_sequences(onlyfiles,batch_size, batchflag,hexmethod):
                 chargevals = np.argsort(chargevals)
                 chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
                 trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
-                            
+                #Denoising
+                for y in np.arange(4):
+                    im1=trainarr[x,y,:,:]
+                    im1=im1[:,:,0]
+                    im1=im1+abs(np.min(im1))
+                    im2=denoise_bilateral(im1,multichannel=False)
+                    im2=np.expand_dims(im2,axis=2)
+                    trainarr[x,y,:,:]=im2
+                    
             training_sample_count = len(trainarr)
             batches = int(training_sample_count / batch_size)
             remainder_samples = training_sample_count % batch_size
             i = i + 1000
             countarr = np.arange(0, len(labelsarr))
 
-            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
+#            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
             if remainder_samples:
                 batches = batches + 1
 
@@ -223,7 +446,9 @@ def generate_real_sequences(onlyfiles,batch_size,hexmethod):
 
                 chargevals = np.argsort(chargevals)
                 chargevals = np.flip(chargevals,axis=0) #Flip to descending order.
+                
                 trainarr[x, :, :, :] = trainarr[x, chargevals, :, :]
+
                             
             training_sample_count = len(trainarr)
             batches = int(training_sample_count / batch_size)
@@ -231,7 +456,7 @@ def generate_real_sequences(onlyfiles,batch_size,hexmethod):
             i = i + len(idarr)
             countarr = np.arange(0, len(idarr))
 
-            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
+#            trainarr = (trainarr-np.amin(trainarr,axis=0))/(np.amax(trainarr,axis=0)-np.amin(trainarr,axis=0))
             if remainder_samples:
                 batches = batches + 1
 

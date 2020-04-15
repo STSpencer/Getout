@@ -18,16 +18,20 @@ if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
 gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcgammacrab.dst.root'
 protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcprotoncrab.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
 cam = 'VERITAS'
-runcode='Crabrun1'
-runname='/lustre/fs19/group/cta/users/sspencer/Crabrun1/'+runcode+'_'
+runcode='Crabrunecut'
+runname='/lustre/fs19/group/cta/users/sspencer/Crabrunecut/'+runcode+'_'
 nochannels=499
 nofiles=200
+gammacutval=0.1
+protoncutval=0.3
+
+#print(list_branches(protonfile,'dst'))
 
 f=ROOT.TFile.Open(protonfile,'read')
 mytree=f.Get("dst")
 noprotons=len(tree2array(mytree,branches=['eventNumber']))
 f.Close()
-
+raise KeyboardInterrupt
 f=ROOT.TFile.Open(gammafile,'read')
 mytree=f.Get("dst")
 nogammas=len(tree2array(mytree,branches=['eventNumber']))
@@ -96,7 +100,12 @@ for runno in np.arange(nofiles):
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     #deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
-    
+    mceng=tree2array(mytree,branches=['MCe0'],start=startev,stop=stopev)
+    mceng=mceng.view(np.float64)
+    passlocs=np.where(mceng>protoncutval)
+    imarr=imarr[passlocs)
+    evarr=evarr[passlocs]
+
     for i in np.arange(trigsperfile):
         
         to_hdf['id'].append(trigsperfile*runno+evarr[i][0])
@@ -127,7 +136,13 @@ for runno in np.arange(nofiles):
     print('Gamma DST Retrieved')
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
+    mceng=tree2array(mytree,branches=['MCe0'],start=startev,stop=stopev)
+    mceng=mceng.view(np.float64)
+    passlocs=np.where(mceng>gammacutval)
+    imarr=imarr[passlocs)
+    evarr=evarr[passlocs]
 
+    for i in np.arange(trig
     for i in np.arange(trigsperfile):
         
         to_hdf['id'].append(trigsperfile*(runno+1)+evarr[i][0])
