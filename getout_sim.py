@@ -15,28 +15,28 @@ ROOT.gROOT.SetBatch(True)
 if gSystem.Load("$EVNDISPSYS/lib/libVAnaSum.so"):
     print("Problem loading EventDisplay libraries - please check this before proceeding")
 
-gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcgammacrab.dst.root'
-protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcprotoncrab.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
+gammafile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcgammacrab67272.dst.root'
+protonfile='/lustre/fs19/group/cta/users/sspencer/ver/aux/mcprotoncrab67272.dst.root' #This is a test tycho run just to use as a placeholder until we get some MC
 cam = 'VERITAS'
-runcode='Crabrunecut'
-runname='/lustre/fs19/group/cta/users/sspencer/Crabrunecut/'+runcode+'_'
+runcode='Crab67272'
+runname='/lustre/fs19/group/cta/users/sspencer/Crab67272/'+runcode+'_'
 nochannels=499
 nofiles=200
-gammacutval=0.1
-protoncutval=0.3
 
 #print(list_branches(protonfile,'dst'))
 
 f=ROOT.TFile.Open(protonfile,'read')
 mytree=f.Get("dst")
-noprotons=len(tree2array(mytree,branches=['eventNumber']))
-f.Close()
-raise KeyboardInterrupt
-f=ROOT.TFile.Open(gammafile,'read')
-mytree=f.Get("dst")
-nogammas=len(tree2array(mytree,branches=['eventNumber']))
+evarr=tree2array(mytree,branches=['eventNumber'])
+noprotons=len(evarr)
 f.Close()
 
+f=ROOT.TFile.Open(gammafile,'read')
+mytree=f.Get("dst")
+evarr=tree2array(mytree,branches=['eventNumber'])
+nogammas=len(evarr)
+f.Close()
+print(noprotons,nogammas)
 notrigs=min([noprotons,nogammas])
 print('Number of triggers',notrigs)
 
@@ -100,11 +100,6 @@ for runno in np.arange(nofiles):
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     #deadarr=tree2array(mytree,branches=['dead'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
-    mceng=tree2array(mytree,branches=['MCe0'],start=startev,stop=stopev)
-    mceng=mceng.view(np.float64)
-    passlocs=np.where(mceng>protoncutval)
-    imarr=imarr[passlocs)
-    evarr=evarr[passlocs]
 
     for i in np.arange(trigsperfile):
         
@@ -137,12 +132,7 @@ for runno in np.arange(nofiles):
     imarr=tree2array(mytree,branches=['sum'],start=startev,stop=stopev)
     evarr=tree2array(mytree,branches=['eventNumber'],start=startev,stop=stopev)
     mceng=tree2array(mytree,branches=['MCe0'],start=startev,stop=stopev)
-    mceng=mceng.view(np.float64)
-    passlocs=np.where(mceng>gammacutval)
-    imarr=imarr[passlocs)
-    evarr=evarr[passlocs]
 
-    for i in np.arange(trig
     for i in np.arange(trigsperfile):
         
         to_hdf['id'].append(trigsperfile*(runno+1)+evarr[i][0])
